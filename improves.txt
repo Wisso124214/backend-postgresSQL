@@ -1,0 +1,29 @@
+
+Todo:
+----
+
+✔ Expose server port
+✔ Validations
+
+
+Endpoints:
+---------
+
+* /forgotPassword
+✔ /home
+✔ /logout
+✔ /login
+✔ /register
+
+
+Methods:
+-------
+
+✔ createSession()
+✔ destroySession()
+✔ existSession()
+✔ getSession()
+
+
+
+
