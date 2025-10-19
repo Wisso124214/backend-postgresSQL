@@ -1,21 +1,30 @@
-import { SERVER_URL } from './config.js';
+import 'module-alias/register.js';
+import { config } from '#root/config.js';
+import app from '#src/middleware.js';
+import { dbPoolDisconnection } from '#src/db.js';
 
-import app from './src/middleware.js';
-import { dbConnection } from './src/db.js';
-
-import { createControllers } from './src/controllers.js';
 import { createRoutes } from './src/routes.js';
 
-dbConnection(app)
-  .then(async () => {
-    await createControllers(app);
-    await createRoutes(app);
+const { PORT } = config;
 
+(async () => {
+  try {
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Error starting server:', error);
+  }
+})()
+  .then(async () => {
+    await createRoutes(app);
   })
   .catch((err) => {
-    console.log('Error connecting to db ', err);
+    console.log('Error server listening ', err);
+    dbPoolDisconnection();
   });
 
 process.on('uncaughtException', (err) => {
   console.log(err);
+  dbPoolDisconnection();
 });

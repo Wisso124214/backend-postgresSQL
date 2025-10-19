@@ -1,16 +1,53 @@
-import mongoose from 'mongoose';
-import { config } from '../config.js';
+import { pool } from '#root/config-db.js';
 
-const { DB_URL, PORT } = config;
-
-export const dbConnection = async (app) => {
-  mongoose.connect(DB_URL)
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Connected to the database on port ${PORT}`);
+const dbClientConnection = async () =>
+  await pool
+    .connect()
+    .then((cli) => {
+      console.log(`Client connected to the database`);
+      return cli;
+    })
+    .catch((err) => {
+      console.error('Client database connection error', err.stack || err);
+      process.exit(1);
     });
-  })
-  .catch((error) => {
-    console.log('Error connecting to the database: ', error);
-  });
-}
+
+const dbClientDisconnection = (client) => {
+  if (!client) {
+    console.error('No client provided for disconnection');
+    return;
+  }
+
+  try {
+    client.release();
+    console.log('Client database connection closed');
+  } catch (err) {
+    console.error('Error closing client database connection', err.stack || err);
+  }
+};
+
+const dbPoolDisconnection = async () =>
+  await pool
+    .end()
+    .then(() => console.log('Database pool has ended'))
+    .catch((err) => {
+      console.error('Error ending database pool', err.stack || err);
+    });
+
+const dbClientQuery = async (query, params = []) => {
+  const client = await dbClientConnection();
+  try {
+    return await client.query(query, params);
+  } catch (error) {
+    console.error('Error executing query', error.stack || error);
+  } finally {
+    dbClientDisconnection(client);
+  }
+};
+
+export {
+  dbClientConnection,
+  dbClientDisconnection,
+  dbPoolDisconnection,
+  dbClientQuery,
+};
