@@ -1,11 +1,13 @@
 import 'module-alias/register.js';
 import { SERVER_URL, config } from '#root/config.js';
 import app from '#src/middleware.js';
-import { dbPoolDisconnection } from '#src/db.js';
-
-import { createRoutes } from './src/routes.js';
+import DB from '#src/db.js';
+import Router from '#src/router.js';
 
 const { PORT } = config;
+
+const db = new DB();
+const router = new Router(app);
 
 (async () => {
   try {
@@ -17,14 +19,14 @@ const { PORT } = config;
   }
 })()
   .then(async () => {
-    await createRoutes(app);
+    await router.createRoutes();
   })
   .catch((err) => {
     console.log('Error server listening ', err);
-    dbPoolDisconnection();
+    db.dbPoolDisconnection();
   });
 
 process.on('uncaughtException', (err) => {
   console.log(err);
-  dbPoolDisconnection();
+  db.dbPoolDisconnection();
 });

@@ -1,5 +1,7 @@
 import { SERVER_URL, profiles } from '#root/config.js';
-import { dbClientQuery } from '#src/db.js';
+import DB from '#src/db.js';
+
+const db = new DB();
 
 export const createAndUpdateSession = (req, data) => {
   createSession(req);
@@ -51,12 +53,12 @@ export const setProfileToUser = async (data) => {
       VALUES ($1, $2)
       ON CONFLICT DO NOTHING;
     `;
-  const userRes = await dbClientQuery(userQuery, [username]);
-  const profileRes = await dbClientQuery(profileQuery, [profile]);
+  const userRes = await db.dbClientQuery(userQuery, [username]);
+  const profileRes = await db.dbClientQuery(profileQuery, [profile]);
   if (userRes.rows.length > 0 && profileRes.rows.length > 0) {
     const userId = userRes.rows[0].id;
     const profileId = profileRes.rows[0].id;
-    await dbClientQuery(insertUserProfileQuery, [userId, profileId]);
+    await db.dbClientQuery(insertUserProfileQuery, [userId, profileId]);
   } else {
     console.error('User or Profile not found for assignment');
   }

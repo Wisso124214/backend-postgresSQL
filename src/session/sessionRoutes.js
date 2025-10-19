@@ -1,24 +1,22 @@
 import bcrypt from 'bcrypt';
+import Validator from '#src/validator.js';
+import DB from '#src/db.js';
+
 import { SERVER_URL, profiles } from '#root/config.js';
-import {
-  validateUsername,
-  validateEmail,
-  validatePassword,
-  validateConfirmPassword,
-} from '#src/validations.js';
 import {
   createAndUpdateSession,
   destroySession,
   getSession,
   existSession,
   setProfileToUser,
-  findUsers,
 } from './sessionManager.js';
 import { generateToken, verifyToken } from '#root/services/tokenManager.js';
 import { sendRecoveryEmail } from '#root/services/emailService.js';
-import { dbClientQuery } from '#src/db.js';
 
-export const createSessionRoutes = async (app) => {
+export const createRoutes = async (app) => {
+  const db = new DB();
+  const validator = new Validator();
+
   app.post('/login', async (req, res) => {
     if (existSession(req, res)) {
       return res.send({
@@ -29,7 +27,7 @@ export const createSessionRoutes = async (app) => {
 
     const userData = req.body || JSON.parse(req.headers.data || '{}');
 
-    dbClientQuery('SELECT * FROM public."user" WHERE username = $1', [
+    db.dbClientQuery('SELECT * FROM public."user" WHERE username = $1', [
       userData.username,
     ])
       .then(async (result) => {
@@ -56,31 +54,33 @@ export const createSessionRoutes = async (app) => {
         );
 
         if (passwordMatch) {
-          await dbClientQuery(
-            'SELECT * FROM public."user_profile" INNER JOIN public."profile" ON "user_profile".id_profile = "profile".id WHERE "user_profile".id_user = $1',
-            [user.id]
-          ).then(async (userProfilesResult) => {
-            const userProfiles = userProfilesResult.rows.map((up) => up.name);
-            if (
-              userData.activeProfile &&
-              userProfiles.includes(userData.activeProfile)
-            ) {
-              createAndUpdateSession(req, userData);
-              return res.send({
-                message: `Bienvenido ${userData.activeProfile}, ${user.username}`,
-              });
-            } else if (userProfiles.length > 1) {
-              return res.send({
-                message: `Seleccione el perfil con el que desea iniciar sesión`,
-                profiles: userProfiles,
-              });
-            } else {
-              createAndUpdateSession(req, userData);
-              return res.send({
-                message: `Bienvenido ${userProfiles[0]}, ${user.username}`,
-              });
-            }
-          });
+          await db
+            .dbClientQuery(
+              'SELECT * FROM public."user_profile" INNER JOIN public."profile" ON "user_profile".id_profile = "profile".id WHERE "user_profile".id_user = $1',
+              [user.id]
+            )
+            .then(async (userProfilesResult) => {
+              const userProfiles = userProfilesResult.rows.map((up) => up.name);
+              if (
+                userData.activeProfile &&
+                userProfiles.includes(userData.activeProfile)
+              ) {
+                createAndUpdateSession(req, userData);
+                return res.send({
+                  message: `Bienvenido ${userData.activeProfile}, ${user.username}`,
+                });
+              } else if (userProfiles.length > 1) {
+                return res.send({
+                  message: `Seleccione el perfil con el que desea iniciar sesión`,
+                  profiles: userProfiles,
+                });
+              } else {
+                createAndUpdateSession(req, userData);
+                return res.send({
+                  message: `Bienvenido ${userProfiles[0]}, ${user.username}`,
+                });
+              }
+            });
         } else {
           return res
             .status(401)
@@ -118,10 +118,10 @@ export const createSessionRoutes = async (app) => {
       });
     }
 
-    const usernameError = validateUsername(username);
-    const emailError = validateEmail(email);
-    const passwordError = validatePassword(password);
-    const confirmPasswordError = validateConfirmPassword(
+    const usernameError = validator.validateUsername(username);
+    const emailError = validator.validateEmail(email);
+    const passwordError = validator.validatePassword(password);
+    const confirmPasswordError = validator.validateConfirmPassword(
       password,
       confirmPassword
     );
@@ -157,7 +157,7 @@ export const createSessionRoutes = async (app) => {
 
     createAndUpdateSession(req, userData);
 
-    dbClientQuery(
+    db.dbClientQuery(
       'INSERT INTO public."user" (username, password, email, status, register_date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [
         userData.username,
@@ -238,16 +238,15 @@ export const createSessionRoutes = async (app) => {
         .status(400)
         .send({ errorCode: 400, message: 'Por favor ingrese su email' });
     }
-    const emailError = validateEmail(email);
+    const emailError = validator.validateEmail(email);
     if (emailError) {
       return res.status(400).send({ errorCode: 400, message: emailError });
     }
 
     // Busca el usuario con ese email
-    const data = await dbClientQuery(
-      'SELECT * FROM public."user" WHERE email = $1;',
-      [email]
-    ).then((result) => result.rows);
+    const data = await db
+      .dbClientQuery('SELECT * FROM public."user" WHERE email = $1;', [email])
+      .then((result) => result.rows);
 
     if (data?.length > 0) {
       // Si se encuentra el usuario, enviar un email con el token de recuperación
@@ -316,8 +315,8 @@ export const createSessionRoutes = async (app) => {
         .send({ errorCode: 400, message: 'Por favor llene todos los campos' });
     }
 
-    const passwordError = validatePassword(password);
-    const confirmPasswordError = validateConfirmPassword(
+    const passwordError = validator.validatePassword(password);
+    const confirmPasswordError = validator.validateConfirmPassword(
       password,
       confirmPassword
     );
@@ -334,7 +333,7 @@ export const createSessionRoutes = async (app) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const updatedUser = { ...decoded.user, password: hashedPassword };
 
-    dbClientQuery('UPDATE public."user" SET password = $1 WHERE id = $2;', [
+    db.dbClientQuery('UPDATE public."user" SET password = $1 WHERE id = $2;', [
       updatedUser.password,
       userId,
     ])

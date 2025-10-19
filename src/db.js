@@ -1,49 +1,58 @@
 import { pool } from '#root/config-db.js';
 
-const dbClientConnection = async () =>
-  await pool
-    .connect()
-    .then((cli) => cli)
-    .catch((err) => {
-      console.error('Client database connection error', err.stack || err);
-      process.exit(1);
-    });
+export default class DB {
+  constructor() {
+    this.pool = pool;
 
-const dbClientDisconnection = (client) => {
-  if (!client) {
-    console.error('No client provided for disconnection');
-    return;
+    if (!DB.instance) {
+      DB.instance = this;
+    }
+    return DB.instance;
   }
 
-  try {
-    client.release();
-  } catch (err) {
-    console.error('Error closing client database connection', err.stack || err);
+  async dbClientConnection() {
+    return await pool
+      .connect()
+      .then((cli) => cli)
+      .catch((err) => {
+        console.error('Client database connection error', err.stack || err);
+        process.exit(1);
+      });
   }
-};
 
-const dbPoolDisconnection = async () =>
-  await pool
-    .end()
-    .then(() => console.log('Database pool has ended'))
-    .catch((err) => {
-      console.error('Error ending database pool', err.stack || err);
-    });
+  dbClientDisconnection(client) {
+    if (!client) {
+      console.error('No client provided for disconnection');
+      return;
+    }
 
-const dbClientQuery = async (query, params = []) => {
-  const client = await dbClientConnection();
-  try {
-    return await client.query(query, params);
-  } catch (error) {
-    console.error('Error executing query', error.stack || error);
-  } finally {
-    dbClientDisconnection(client);
+    try {
+      client.release();
+    } catch (err) {
+      console.error(
+        'Error closing client database connection',
+        err.stack || err
+      );
+    }
   }
-};
 
-export {
-  dbClientConnection,
-  dbClientDisconnection,
-  dbPoolDisconnection,
-  dbClientQuery,
-};
+  async dbPoolDisconnection() {
+    return await pool
+      .end()
+      .then(() => console.log('Database pool has ended'))
+      .catch((err) => {
+        console.error('Error ending database pool', err.stack || err);
+      });
+  }
+
+  async dbClientQuery(query, params = []) {
+    const client = await this.dbClientConnection();
+    try {
+      return await client.query(query, params);
+    } catch (error) {
+      console.error('Error executing query', error.stack || error);
+    } finally {
+      dbClientDisconnection(client);
+    }
+  }
+}

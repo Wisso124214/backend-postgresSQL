@@ -1,6 +1,5 @@
-export const createSecurityRoutes = async (app) => {
-
-  app.get('/', (req, res) => {
-    res.send('API is running');
+export const createRoutes = async (app) => {
+  app.get('/security', (req, res) => {
+    res.send('Security API is running');
   });
 };
