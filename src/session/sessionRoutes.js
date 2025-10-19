@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
-import Validator from '#src/validator.js';
-import DB from '#src/db.js';
+import Validator from '#validator/validator.js';
+import DBMS from '#dbms/dbms.js';
 
 import { SERVER_URL, profiles } from '#config/config.js';
 import {
@@ -10,12 +10,14 @@ import {
   existSession,
   setProfileToUser,
 } from './sessionManager.js';
-import { generateToken, verifyToken } from '#root/services/tokenManager.js';
-import { sendRecoveryEmail } from '#root/services/emailService.js';
+import Tokenizer from '#tokenizer/tokenizer.js';
+import Mailer from '#mailer/mailer.js';
 
 export const createRoutes = async (app) => {
-  const db = new DB();
+  const dbms = new DBMS();
   const validator = new Validator();
+  const tokenizer = new Tokenizer();
+  const mailer = new Mailer();
 
   app.post('/login', async (req, res) => {
     if (existSession(req, res)) {
@@ -27,9 +29,10 @@ export const createRoutes = async (app) => {
 
     const userData = req.body || JSON.parse(req.headers.data || '{}');
 
-    db.dbClientQuery('SELECT * FROM public."user" WHERE username = $1', [
-      userData.username,
-    ])
+    dbms
+      .dbClientQuery('SELECT * FROM public."user" WHERE username = $1', [
+        userData.username,
+      ])
       .then(async (result) => {
         if (
           !result ||
@@ -54,7 +57,7 @@ export const createRoutes = async (app) => {
         );
 
         if (passwordMatch) {
-          await db
+          await dbms
             .dbClientQuery(
               'SELECT * FROM public."user_profile" INNER JOIN public."profile" ON "user_profile".id_profile = "profile".id WHERE "user_profile".id_user = $1',
               [user.id]
@@ -157,16 +160,17 @@ export const createRoutes = async (app) => {
 
     createAndUpdateSession(req, userData);
 
-    db.dbClientQuery(
-      'INSERT INTO public."user" (username, password, email, status, register_date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [
-        userData.username,
-        userData.password,
-        userData.email,
-        userData.status,
-        userData.register_date,
-      ]
-    )
+    dbms
+      .dbClientQuery(
+        'INSERT INTO public."user" (username, password, email, status, register_date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [
+          userData.username,
+          userData.password,
+          userData.email,
+          userData.status,
+          userData.register_date,
+        ]
+      )
       .then(async (result) => {
         const postedUser = result?.rows[0];
         if (!postedUser) {
@@ -244,7 +248,7 @@ export const createRoutes = async (app) => {
     }
 
     // Busca el usuario con ese email
-    const data = await db
+    const data = await dbms
       .dbClientQuery('SELECT * FROM public."user" WHERE email = $1;', [email])
       .then((result) => result.rows);
 
@@ -258,12 +262,12 @@ export const createRoutes = async (app) => {
         });
       }
       const user = data[0];
-      const token = generateToken({
+      const token = tokenizer.generateToken({
         user,
         email: user.email,
         userId: user.id,
       });
-      // sendRecoveryEmail(user.email, token);
+      // mailer.sendRecoveryEmail(user.email, token);
       // res.send({
       //   message: 'Se ha enviado un email de recuperación',
       //   userId: user.id,
@@ -301,7 +305,7 @@ export const createRoutes = async (app) => {
       });
     }
 
-    const decoded = verifyToken(token);
+    const decoded = tokenizer.verifyToken(token);
     if (!decoded) {
       return res.status(400).send({
         errorCode: 400,
@@ -333,10 +337,11 @@ export const createRoutes = async (app) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const updatedUser = { ...decoded.user, password: hashedPassword };
 
-    db.dbClientQuery('UPDATE public."user" SET password = $1 WHERE id = $2;', [
-      updatedUser.password,
-      userId,
-    ])
+    dbms
+      .dbClientQuery('UPDATE public."user" SET password = $1 WHERE id = $2;', [
+        updatedUser.password,
+        userId,
+      ])
       .then(() => {
         res.send({
           message: `Contraseña actualizada correctamente para el usuario . Por favor inicie sesión con su nueva contraseña.`,

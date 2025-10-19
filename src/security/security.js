@@ -1,7 +1,7 @@
 import * as maintenance from './maintenance.js';
-import DB from '#src/db.js';
+import DBMS from '#dbms/dbms.js';
 
-const db = new DB();
+const dbms = new DBMS();
 export default class Security {
   constructor(data = {}) {
     const {} = data;

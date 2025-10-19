@@ -1,8 +1,8 @@
-import DB from '#src/db.js';
+import DBMS from '#dbms/dbms.js';
 
 export default class Validator {
   constructor() {
-    this.db = new DB();
+    this.dbms = new DBMS();
 
     this.validationValues = {
       user: {

@@ -1,13 +1,13 @@
 import 'module-alias/register.js';
 import { SERVER_URL, config } from '#config/config.js';
 import app from '#src/middleware.js';
-import DB from '#src/db.js';
+import DBMS from '#dbms/dbms.js';
 import Session from '#src/session/session.js';
 import Security from '#src/security/security.js'; // Do not remove this line even if it seems unused
 
 const { PORT } = config;
 
-const db = new DB();
+const dbms = new DBMS();
 const session = new Session();
 const security = new Security();
 
@@ -26,10 +26,10 @@ const security = new Security();
   })
   .catch((err) => {
     console.log('Error server listening ', err);
-    db.dbPoolDisconnection();
+    dbms.dbPoolDisconnection();
   });
 
 process.on('uncaughtException', (err) => {
   console.log(err);
-  db.dbPoolDisconnection();
+  dbms.dbPoolDisconnection();
 });

@@ -11,7 +11,11 @@
     "#config/*": "./config/*",
     "#src/*": "./src/*",
     "#utils/*": "./utils/*",
-    "#services/*": "./services/*",
+    "#services/*": "./src/services/*",
+    "#dbms/*": "./src/dbms/*",
+    "#mailer/*": "./src/mailer/*",
+    "#tokenizer/*": "./src/tokenizer/*",
+    "#validator/*": "./src/validator/*",
     "#security/*": "./src/security/*",
     "#session/*": "./src/session/*"
   },

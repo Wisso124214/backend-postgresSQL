@@ -1,6 +1,6 @@
-import DB from '#src/db.js';
+import DBMS from '#dbms/dbms.js';
 
-const db = new DB();
+const dbms = new DBMS();
 const tableNames = [
   'user',
   'profile',
@@ -28,7 +28,8 @@ const createMaintenanceTableName = (tableName) => {
     .join('');
 
   exports[`get${tableNameToFunction}s`] = (req, res) => {
-    db.dbClientQuery(`SELECT * FROM public.${tableName}`, [])
+    dbms
+      .dbClientQuery(`SELECT * FROM public.${tableName}`, [])
       .then((result) => {
         res.send(result.rows);
       })
@@ -43,7 +44,8 @@ const createMaintenanceTableName = (tableName) => {
     const values = Object.values(req.params || req.body || {});
 
     const query = `SELECT * FROM public.${tableName} WHERE ${fields.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
-    db.dbClientQuery(query, values)
+    dbms
+      .dbClientQuery(query, values)
       .then((result) => {
         res.send(result.rows);
       })
@@ -80,7 +82,8 @@ const createMaintenanceTableName = (tableName) => {
     SET ${keys.map((key, i) => `${key} = $${i + 1}`).join(', ')}
     WHERE id = $${keys.length + 1};
   `;
-    db.dbClientQuery(updateQuery, [...Object.values(req.body), id])
+    dbms
+      .dbClientQuery(updateQuery, [...Object.values(req.body), id])
       .then(() => {
         res.send({ message: 'Registro actualizado correctamente' });
       })
@@ -117,7 +120,8 @@ const createMaintenanceTableName = (tableName) => {
     SET ${keys.map((key, i) => `${key} = $${i + 1}`).join(', ')}
     WHERE username = $${keys.length + 1};
   `;
-    db.dbClientQuery(updateQuery, [...Object.values(req.body), username])
+    dbms
+      .dbClientQuery(updateQuery, [...Object.values(req.body), username])
       .then(() => {
         res.send({ message: 'Registro actualizado correctamente' });
       })
@@ -130,7 +134,8 @@ const createMaintenanceTableName = (tableName) => {
   exports[`delete${tableNameToFunction}ByUsername`] = (req, res) => {
     const { username } = req.params;
     const deleteQuery = `DELETE FROM public.${tableName} WHERE username = $1;`;
-    db.dbClientQuery(deleteQuery, [username])
+    dbms
+      .dbClientQuery(deleteQuery, [username])
       .then(() => {
         res.send({ message: 'Registro eliminado correctamente' });
       })
@@ -143,7 +148,8 @@ const createMaintenanceTableName = (tableName) => {
   exports[`delete${tableNameToFunction}ById`] = (req, res) => {
     const { id } = req.params;
     const deleteQuery = `DELETE FROM public.${tableName} WHERE id = $1;`;
-    db.dbClientQuery(deleteQuery, [id])
+    dbms
+      .dbClientQuery(deleteQuery, [id])
       .then(() => {
         res.send({ message: 'Registro eliminado correctamente' });
       })
@@ -165,7 +171,8 @@ const createMaintenanceTableName = (tableName) => {
     }
 
     const deleteQuery = `DELETE FROM public.${tableName};`;
-    db.dbClientQuery(deleteQuery, [])
+    dbms
+      .dbClientQuery(deleteQuery, [])
       .then(() => {
         res.send({
           message: `Todos los ${tableName} han sido eliminados correctamente`,
@@ -181,7 +188,8 @@ const createMaintenanceTableName = (tableName) => {
     const { fields, values } = req.params;
 
     const query = `DELETE FROM public.${tableName} WHERE ${fields.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
-    db.dbClientQuery(query, values)
+    dbms
+      .dbClientQuery(query, values)
       .then(() => {
         res.send({ message: `${tableName} eliminados correctamente` });
       })

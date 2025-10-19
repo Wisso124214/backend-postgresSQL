@@ -1,13 +1,13 @@
 import { pool } from '#root/config/config-db.js';
 
-export default class DB {
+export default class DBMS {
   constructor() {
     this.pool = pool;
 
-    if (!DB.instance) {
-      DB.instance = this;
+    if (!DBMS.instance) {
+      DBMS.instance = this;
     }
-    return DB.instance;
+    return DBMS.instance;
   }
 
   async dbClientConnection() {

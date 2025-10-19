@@ -13,7 +13,7 @@
   "include": [
     "src",
     "utils",
-    "services",
+    "src/services",
     "dev-tests",
     "*.js",
     "config/config-db.js",
