@@ -2,7 +2,7 @@ const validationValues = {
   user: {
     username: { min: 6, max: 30 },
     email: { max: 100 },
-    password: { max: 80 },
+    password: { min: 8, max: 80 },
   },
   profile: {
     name: { min: 3, max: 30 },

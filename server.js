@@ -1,5 +1,5 @@
 import 'module-alias/register.js';
-import { config } from '#root/config.js';
+import { SERVER_URL, config } from '#root/config.js';
 import app from '#src/middleware.js';
 import { dbPoolDisconnection } from '#src/db.js';
 
@@ -10,7 +10,7 @@ const { PORT } = config;
 (async () => {
   try {
     app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+      console.log(`Server is running on port ${SERVER_URL}`);
     });
   } catch (error) {
     console.error('Error starting server:', error);

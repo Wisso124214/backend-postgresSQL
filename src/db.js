@@ -3,10 +3,7 @@ import { pool } from '#root/config-db.js';
 const dbClientConnection = async () =>
   await pool
     .connect()
-    .then((cli) => {
-      console.log(`Client connected to the database`);
-      return cli;
-    })
+    .then((cli) => cli)
     .catch((err) => {
       console.error('Client database connection error', err.stack || err);
       process.exit(1);
@@ -20,7 +17,6 @@ const dbClientDisconnection = (client) => {
 
   try {
     client.release();
-    console.log('Client database connection closed');
   } catch (err) {
     console.error('Error closing client database connection', err.stack || err);
   }
