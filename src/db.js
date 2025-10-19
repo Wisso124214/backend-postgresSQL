@@ -1,4 +1,4 @@
-import { pool } from '#root/config-db.js';
+import { pool } from '#root/config/config-db.js';
 
 export default class DB {
   constructor() {
@@ -52,7 +52,7 @@ export default class DB {
     } catch (error) {
       console.error('Error executing query', error.stack || error);
     } finally {
-      dbClientDisconnection(client);
+      this.dbClientDisconnection(client);
     }
   }
 }

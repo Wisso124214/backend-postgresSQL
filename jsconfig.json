@@ -10,6 +10,15 @@
     "moduleResolution": "node",
     "baseUrl": "."
   },
-  "include": ["src", "utils", "services", "dev-tests", "*.js"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src",
+    "utils",
+    "services",
+    "dev-tests",
+    "*.js",
+    "config/config-db.js",
+    "config/config.js",
+    "config/example-config-db.js"
+  ],
+  "exclude": ["node_modules"]
 }

@@ -8,6 +8,7 @@
   "main": "back.js",
   "imports": {
     "#root/*": "./*",
+    "#config/*": "./config/*",
     "#src/*": "./src/*",
     "#utils/*": "./utils/*",
     "#services/*": "./services/*",

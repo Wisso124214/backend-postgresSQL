@@ -1,13 +1,15 @@
 import 'module-alias/register.js';
-import { SERVER_URL, config } from '#root/config.js';
+import { SERVER_URL, config } from '#config/config.js';
 import app from '#src/middleware.js';
 import DB from '#src/db.js';
-import Router from '#src/router.js';
+import Session from '#src/session/session.js';
+import Security from '#src/security/security.js'; // Do not remove this line even if it seems unused
 
 const { PORT } = config;
 
 const db = new DB();
-const router = new Router(app);
+const session = new Session();
+const security = new Security();
 
 (async () => {
   try {
@@ -19,7 +21,8 @@ const router = new Router(app);
   }
 })()
   .then(async () => {
-    await router.createRoutes();
+    security.init();
+    await session.init(app);
   })
   .catch((err) => {
     console.log('Error server listening ', err);

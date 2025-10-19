@@ -18,4 +18,8 @@ export default class Session {
     }
     return Session.instance;
   }
+
+  async init(app) {
+    this.createRoutes(app);
+  }
 }
