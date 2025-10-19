@@ -243,9 +243,12 @@ export const createSessionRoutes = async (app) => {
       return res.status(400).send({ errorCode: 400, message: emailError });
     }
 
-    // Busca el usuario con ese email usando findUsers
-    const data = await findUsers({ email });
-    console.log('Usuarios encontrados: ', data);
+    // Busca el usuario con ese email
+    const data = await dbClientQuery(
+      'SELECT * FROM public."user" WHERE email = $1;',
+      [email]
+    ).then((result) => result.rows);
+
     if (data?.length > 0) {
       // Si se encuentra el usuario, enviar un email con el token de recuperación
       if (data.length > 1) {
@@ -259,18 +262,18 @@ export const createSessionRoutes = async (app) => {
       const token = generateToken({
         user,
         email: user.email,
-        userId: user._id,
+        userId: user.id,
       });
       // sendRecoveryEmail(user.email, token);
       // res.send({
       //   message: 'Se ha enviado un email de recuperación',
-      //   userId: user._id,
+      //   userId: user.id,
       //   email: user.email,
       //   token,
       // });
       res.send({
         message: 'Se ha emulado el envío del email de recuperación',
-        userId: user._id,
+        userId: user.id,
         email: user.email,
         token,
       });
@@ -331,13 +334,11 @@ export const createSessionRoutes = async (app) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const updatedUser = { ...decoded.user, password: hashedPassword };
 
-    await fetch(`${SERVER_URL}/user/${userId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedUser),
-    })
-      .then((response) => response.json())
-      .then((data) => {
+    dbClientQuery('UPDATE public."user" SET password = $1 WHERE id = $2;', [
+      updatedUser.password,
+      userId,
+    ])
+      .then(() => {
         res.send({
           message: `Contraseña actualizada correctamente para el usuario . Por favor inicie sesión con su nueva contraseña.`,
           redirect: '/login',

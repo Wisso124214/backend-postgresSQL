@@ -72,31 +72,9 @@ export const setProfilesToUser = async (data) => {
 export const setProfilesToUsers = async (jsonProfiles) => {
   const users = Object.keys(jsonProfiles);
   for (const username of users) {
-    await setProfilesToUser(username, jsonProfiles[username]);
+    await setProfilesToUser({ username, arrProfiles: jsonProfiles[username] });
   }
 };
-
-export const getIdUser = async (username) => {
-  return await fetch(`${SERVER_URL}/users`, {
-    method: 'GET',
-  })
-    .then((response) => response.json())
-    .then((users) => {
-      return users.find((u) => u.username === username)?._id;
-    });
-};
-
-// (() => {
-//   setTimeout(async () => {
-//     await getIdUser('Bustos')
-//     .then(async id_user => {
-//       await setUserProfile(profiles.EVENT_ADMIN.name, id_user)
-//       .then(() => console.log('Profile set to user'))
-//       .catch(err => console.log('Error setting profile to user', err));
-//     })
-//     .catch(err => console.log('Error getting user ID', err));
-//   }, 5000);
-// })();
 
 export const findUsers = async (userData) => {
   const keys = Object.keys(userData);

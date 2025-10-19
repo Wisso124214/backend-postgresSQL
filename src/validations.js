@@ -1,3 +1,5 @@
+import { dbClientQuery } from '#src/db.js';
+
 const validationValues = {
   user: {
     username: { min: 6, max: 30 },
@@ -30,9 +32,6 @@ const validationValues = {
 };
 
 export const validateUsername = (value) => {
-  // Chequear que la longitud sea mayor a 6 caracteres
-  // Chequear que el username no exista en la lista de usernames
-
   if (
     value &&
     value.length < validationValues.user.username.min &&
@@ -42,9 +41,22 @@ export const validateUsername = (value) => {
   } else if (value && value.length > validationValues.user.username.max) {
     return `El nombre de usuario no puede tener más de ${validationValues.user.username.max} caracteres.`;
   }
-  // if (listUsernames.includes(value)) {
-  //   return 'El nombre de usuario ya está en uso.';
-  // }
+
+  let userExists = false;
+
+  const usernameExistsQuery =
+    'SELECT COUNT(*) FROM public."user" WHERE username = $1;';
+  dbClientQuery(usernameExistsQuery, [value])
+    .then((result) => {
+      userExists = result.rows[0].count > 0;
+    })
+    .catch((err) => {
+      console.error('Error checking username existence:', err);
+    });
+
+  if (userExists) {
+    return 'El nombre de usuario ya está en uso.';
+  }
 
   return '';
 };
@@ -63,6 +75,23 @@ export const validateEmail = (email) => {
   if (email && email.length > 0 && !emailRegex.test(email)) {
     return 'El email no es válido';
   }
+
+  let emailInUse = false;
+
+  dbClientQuery('SELECT COUNT(*) FROM public."user" WHERE email = $1;', [email])
+    .then((result) => {
+      if (result.rows[0].count > 0) {
+        emailInUse = true;
+      }
+    })
+    .catch((err) => {
+      console.error('Error checking email existence:', err);
+    });
+
+  if (emailInUse) {
+    return 'El email ya está en uso.';
+  }
+
   return '';
 };
 
