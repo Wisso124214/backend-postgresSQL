@@ -8,7 +8,6 @@ import {
   destroySession,
   getSession,
   existSession,
-  setProfileToUser,
 } from './sessionManager.js';
 import Tokenizer from '#tokenizer/tokenizer.js';
 import Mailer from '#mailer/mailer.js';
@@ -30,7 +29,7 @@ export const createRoutes = async (app) => {
     const userData = req.body || JSON.parse(req.headers.data || '{}');
 
     dbms
-      .dbClientQuery('SELECT * FROM public."user" WHERE username = $1', [
+      .query('SELECT * FROM public."user" WHERE username = $1', [
         userData.username,
       ])
       .then(async (result) => {
@@ -58,7 +57,7 @@ export const createRoutes = async (app) => {
 
         if (passwordMatch) {
           await dbms
-            .dbClientQuery(
+            .query(
               'SELECT * FROM public."user_profile" INNER JOIN public."profile" ON "user_profile".id_profile = "profile".id WHERE "user_profile".id_user = $1',
               [user.id]
             )
@@ -161,7 +160,7 @@ export const createRoutes = async (app) => {
     createAndUpdateSession(req, userData);
 
     dbms
-      .dbClientQuery(
+      .query(
         'INSERT INTO public."user" (username, password, email, status, register_date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
         [
           userData.username,
@@ -178,7 +177,10 @@ export const createRoutes = async (app) => {
             .status(500)
             .send({ errorCode: 500, message: 'Error al registrar usuario' });
         }
-        await setProfileToUser({ username, profile: userData.activeProfile });
+        await dbms.setProfileToUser({
+          username,
+          profile: userData.activeProfile,
+        });
         const loginObj = {
           username,
           password,
@@ -218,21 +220,6 @@ export const createRoutes = async (app) => {
     res.send(result);
   });
 
-  app.get('/home', async (req, res) => {
-    if (!existSession(req)) {
-      res.send({
-        message: 'Debes iniciar sesión para acceder a esta página.',
-        redirect: '/login',
-      });
-      return;
-    }
-
-    const sessionData = getSession(req);
-    const message = `Bienvenido a la página principal, ${sessionData.activeProfile || 'participante'}, ${sessionData.username || 'invitado'}`;
-    res.send({ message, sessionData });
-    return;
-  });
-
   app.post('/forgotPassword', async (req, res) => {
     // Validar el email que viene en los headers
     let userData = req.body || JSON.parse(req.headers.data || '{}');
@@ -249,7 +236,7 @@ export const createRoutes = async (app) => {
 
     // Busca el usuario con ese email
     const data = await dbms
-      .dbClientQuery('SELECT * FROM public."user" WHERE email = $1;', [email])
+      .query('SELECT * FROM public."user" WHERE email = $1;', [email])
       .then((result) => result.rows);
 
     if (data?.length > 0) {
@@ -338,7 +325,7 @@ export const createRoutes = async (app) => {
     const updatedUser = { ...decoded.user, password: hashedPassword };
 
     dbms
-      .dbClientQuery('UPDATE public."user" SET password = $1 WHERE id = $2;', [
+      .query('UPDATE public."user" SET password = $1 WHERE id = $2;', [
         updatedUser.password,
         userId,
       ])

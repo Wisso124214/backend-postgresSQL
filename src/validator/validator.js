@@ -30,6 +30,10 @@ export default class Validator {
         name: { min: 3, max: 50 },
         description: { max: 200 },
       },
+      option: {
+        name: { min: 3, max: 80 },
+        description: { max: 200 },
+      },
       transaction: {
         description: { max: 200 },
       },
@@ -58,7 +62,7 @@ export default class Validator {
 
     const usernameExistsQuery =
       'SELECT COUNT(*) FROM public."user" WHERE username = $1;';
-    db.dbClientQuery(usernameExistsQuery, [value])
+    db.query(usernameExistsQuery, [value])
       .then((result) => {
         userExists = result.rows[0].count > 0;
       })
@@ -90,9 +94,7 @@ export default class Validator {
 
     let emailInUse = false;
 
-    db.dbClientQuery('SELECT COUNT(*) FROM public."user" WHERE email = $1;', [
-      email,
-    ])
+    db.query('SELECT COUNT(*) FROM public."user" WHERE email = $1;', [email])
       .then((result) => {
         if (result.rows[0].count > 0) {
           emailInUse = true;

@@ -3,7 +3,7 @@ import { SERVER_URL, config } from '#config/config.js';
 import app from '#src/middleware.js';
 import DBMS from '#dbms/dbms.js';
 import Session from '#src/session/session.js';
-import Security from '#src/security/security.js'; // Do not remove this line even if it seems unused
+import Security from '#src/security/security.js';
 
 const { PORT } = config;
 
@@ -21,15 +21,17 @@ const security = new Security();
   }
 })()
   .then(async () => {
-    security.init();
     await session.init(app);
+    dbms.init();
+    // console.log('session methods:', session.getAllDinamicMethodNames());
+    // console.log('dbms methods:', dbms.getAllDinamicMethodNames());
   })
   .catch((err) => {
     console.log('Error server listening ', err);
-    dbms.dbPoolDisconnection();
+    dbms.poolDisconnection();
   });
 
 process.on('uncaughtException', (err) => {
   console.log(err);
-  dbms.dbPoolDisconnection();
+  dbms.poolDisconnection();
 });
