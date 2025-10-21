@@ -316,7 +316,18 @@ export default class DBMS {
       const profileId = profileRes.rows[0].id;
       await this.query(insertUserProfileQuery, [userId, profileId]);
     } else {
-      console.error('User or Profile not found for assignment');
+      if (userRes.rows.length === 0)
+        await this.query(
+          'INSERT INTO public."user" (username) VALUES ($1) ON CONFLICT DO NOTHING;',
+          [username]
+        );
+      if (profileRes.rows.length === 0)
+        await this.query(
+          'INSERT INTO public."profile" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+          [profile]
+        );
+
+      this.setUserProfile(data);
     }
   }
 
@@ -324,6 +335,13 @@ export default class DBMS {
     const users = Object.keys(data);
     for (const username of users) {
       const arrProfiles = data[username];
+      const isMissingData = !username || !arrProfiles;
+      const isEmpty = arrProfiles.length === 0;
+      if (isMissingData) throw new Error('Invalid or missing data');
+      if (isEmpty)
+        throw new Error(`No data provided for ${username}. So skipping.`);
+      if (isMissingData || isEmpty) continue;
+
       for (const profile of arrProfiles) {
         await this.setUserProfile({ username, profile });
       }
@@ -383,7 +401,18 @@ export default class DBMS {
         const profileId = profileRes.rows[0].id;
         await this.query(insertOptionProfileQuery, [optionId, profileId]);
       } else {
-        console.error('Option or Profile not found for assignment');
+        if (optionRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."option" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [option]
+          );
+        if (profileRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."profile" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [profile]
+          );
+
+        this.setProfileOption(data);
       }
     } catch (error) {
       console.error('Error in setProfileOption:', error);
@@ -395,6 +424,13 @@ export default class DBMS {
     const profiles = Object.keys(data);
     for (const profile of profiles) {
       const arrOptions = data[profile];
+      const isMissingData = !profile || !arrOptions;
+      const isEmpty = arrOptions.length === 0;
+      if (isMissingData) throw new Error('Invalid or missing data');
+      if (isEmpty)
+        throw new Error(`No data provided for ${profile}. So skipping.`);
+      if (isMissingData || isEmpty) continue;
+
       for (const option of arrOptions) {
         await this.setProfileOption({ option, profile });
       }
@@ -480,7 +516,18 @@ export default class DBMS {
         const menuId = menuRes.rows[0].id;
         await this.query(insertOptionMenuQuery, [optionId, menuId]);
       } else {
-        console.error('Option or Menu not found for assignment');
+        if (optionRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."option" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [option]
+          );
+        if (menuRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."menu" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [menu]
+          );
+
+        this.setMenuOption(data);
       }
     } catch (error) {
       console.error('Error in setMenuOption:', error);
@@ -492,6 +539,13 @@ export default class DBMS {
     const menus = Object.keys(data);
     for (const menu of menus) {
       const arrOptions = data[menu];
+      const isMissingData = !menu || !arrOptions;
+      const isEmpty = arrOptions.length === 0;
+      if (isMissingData) throw new Error('Invalid or missing data');
+      if (isEmpty)
+        throw new Error(`No data provided for ${menu}. So skipping.`);
+      if (isMissingData || isEmpty) continue;
+
       for (const option of arrOptions) {
         await this.setMenuOption({ option, menu });
       }
@@ -570,9 +624,23 @@ export default class DBMS {
   async setMenusOptionsProfiles(data) {
     const profiles = Object.keys(data);
     for (const profile of profiles) {
+      const isMissingData = !profile || !data[profile];
+      const isEmpty = data[profile].length === 0;
+      if (isMissingData) throw new Error('Invalid or missing data');
+      if (isEmpty)
+        throw new Error(`No data provided for ${profile}. So skipping.`);
+      if (isMissingData || isEmpty) continue;
+
       const menus = Object.keys(data[profile]);
       for (const menu of menus) {
         const arrOptions = data[profile][menu];
+        const isMissingData = !menu || !arrOptions;
+        const isEmpty = arrOptions.length === 0;
+        if (isMissingData) throw new Error('Invalid or missing data');
+        if (isEmpty)
+          throw new Error(`No data provided for ${menu}. So skipping.`);
+        if (isMissingData || isEmpty) continue;
+
         for (const option of arrOptions) {
           await this.setMenuOptionProfile({ option, menu, profile });
         }
@@ -716,6 +784,19 @@ export default class DBMS {
         const methodId = methodRes.rows[0].id;
         const profileId = profileRes.rows[0].id;
         await this.query(insertMethodProfileQuery, [methodId, profileId]);
+      } else {
+        if (methodRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."method" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [method]
+          );
+        if (profileRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."profile" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [profile]
+          );
+
+        this.setProfileMethod(data);
       }
     } catch (error) {
       console.error('Error in setProfileMethod:', error);
@@ -727,6 +808,13 @@ export default class DBMS {
     const profiles = Object.keys(data);
     for (const profile of profiles) {
       const arrMethods = data[profile];
+      const isMissingData = !profile || !arrMethods;
+      const isEmpty = arrMethods.length === 0;
+      if (isMissingData) throw new Error('Invalid or missing data');
+      if (isEmpty)
+        throw new Error(`No data provided for ${profile}. So skipping.`);
+      if (isMissingData || isEmpty) continue;
+
       for (const method of arrMethods) {
         await this.setProfileMethod({ method, profile });
       }
@@ -811,6 +899,19 @@ export default class DBMS {
         const classId = classRes.rows[0].id;
         const methodId = methodRes.rows[0].id;
         await this.query(insertClassMethodQuery, [classId, methodId]);
+      } else {
+        if (classRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."class" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [className]
+          );
+        if (methodRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."method" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [method]
+          );
+
+        this.setClassMethod(data);
       }
     } catch (error) {
       console.error('Error in setClassMethod:', error);
@@ -822,6 +923,13 @@ export default class DBMS {
     const classes = Object.keys(data);
     for (const className of classes) {
       const arrMethods = data[className];
+      const isMissingData = !className || !arrMethods;
+      const isEmpty = arrMethods.length === 0;
+      if (isMissingData) throw new Error('Invalid or missing data');
+      if (isEmpty)
+        throw new Error(`No data provided for ${className}. So skipping.`);
+      if (isMissingData || isEmpty) continue;
+
       for (const method of arrMethods) {
         await this.setClassMethod({ className, method });
       }
@@ -908,6 +1016,18 @@ export default class DBMS {
         const classId = classRes.rows[0].id;
         const subsystemId = subsystemRes.rows[0].id;
         await this.query(insertSubsystemClassQuery, [subsystemId, classId]);
+      } else {
+        if (classRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."class" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [className]
+          );
+        if (subsystemRes.rows.length === 0)
+          await this.query(
+            'INSERT INTO public."subsystem" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
+            [subsystem]
+          );
+        this.setSubsystemClassMethod(data);
       }
     } catch (error) {
       console.error('Error in setSubsystemClassMethod:', error);
@@ -919,8 +1039,22 @@ export default class DBMS {
     const subsystems = Object.keys(data);
     for (const subsystem of subsystems) {
       const classesMethods = data[subsystem];
+      const isMissingData = !subsystem || !classesMethods;
+      const isEmpty = Object.keys(classesMethods).length === 0;
+      if (isMissingData) throw new Error('Invalid or missing data');
+      if (isEmpty)
+        throw new Error(`No data provided for ${subsystem}. So skipping.`);
+      if (isMissingData || isEmpty) continue;
+
       for (const className in classesMethods) {
         const methods = classesMethods[className];
+        const isMissingData = !className || !methods;
+        const isEmpty = methods.length === 0;
+        if (isMissingData) throw new Error('Invalid or missing data');
+        if (isEmpty)
+          throw new Error(`No data provided for ${className}. So skipping.`);
+        if (isMissingData || isEmpty) continue;
+
         for (const method of methods) {
           await this.setSubsystemClassMethod({ subsystem, className, method });
         }
