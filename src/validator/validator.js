@@ -62,7 +62,7 @@ export default class Validator {
 
     const usernameExistsQuery =
       'SELECT COUNT(*) FROM public."user" WHERE username = $1;';
-    db.query(usernameExistsQuery, [value])
+    this.dbms.query(usernameExistsQuery, [value])
       .then((result) => {
         userExists = result.rows[0].count > 0;
       })
@@ -94,7 +94,7 @@ export default class Validator {
 
     let emailInUse = false;
 
-    db.query('SELECT COUNT(*) FROM public."user" WHERE email = $1;', [email])
+    this.dbms.query('SELECT COUNT(*) FROM public."user" WHERE email = $1;', [email])
       .then((result) => {
         if (result.rows[0].count > 0) {
           emailInUse = true;

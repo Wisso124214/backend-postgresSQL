@@ -1,5 +1,5 @@
 export const config = {
-  PORT: process.env.PORT || 3030,
+  PORT: process.env.PORT || 3050,
   SERVER_IP: 'localhost',
   PROTOCOL: 'http',
 };

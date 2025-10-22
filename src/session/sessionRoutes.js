@@ -100,7 +100,7 @@ export const createRoutes = async (app) => {
   app.post('/register', async (req, res) => {
     let userData = req.body || JSON.parse(req.headers.data || '{}');
     const { username, email, password, confirmPassword } = userData;
-    const isParticipant =
+    const isParticipant = 0;
       getSession(req)?.activeProfile === profiles.PARTICIPANT.name;
 
     if (existSession(req, res)) {
@@ -177,7 +177,7 @@ export const createRoutes = async (app) => {
             .status(500)
             .send({ errorCode: 500, message: 'Error al registrar usuario' });
         }
-        await dbms.setProfileToUser({
+        await dbms.setUserProfile({
           username,
           profile: userData.activeProfile,
         });
@@ -195,7 +195,7 @@ export const createRoutes = async (app) => {
           body: JSON.stringify(loginObj),
         })
           .then((response) => response.text())
-          .then((message) => res.send({ message }))
+          .then((message) => res.send(message))
           .catch((error) => {
             console.error('Error al iniciar sesión:', error);
             res
