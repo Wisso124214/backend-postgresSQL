@@ -383,6 +383,40 @@ export default class DBMS {
     }
   }
 
+  async delUserProfile(data) {
+    const { username, profile } = data;
+    if (!username || !profile) throw new Error('Invalid or missing data');
+
+    const deleteQuery = `
+      DELETE FROM public."user_profile"
+      WHERE id_user = (SELECT id FROM public."user" WHERE username = $1)
+      AND id_profile = (SELECT id FROM public."profile" WHERE name = $2);
+    `;
+    try {
+      await this.query(deleteQuery, [username, profile]);
+    } catch (error) {
+      console.error('Error in delUserProfile:', error);
+      throw new Error('Database error');
+    }
+  }
+
+  async delUsersProfiles(data) {
+    const users = Object.keys(data);
+    for (const username of users) {
+      const arrProfiles = data[username];
+      const isMissingData = !username || !arrProfiles;
+      const isEmpty = arrProfiles.length === 0;
+      if (isMissingData) throw new Error('Invalid or missing data');
+      if (isEmpty)
+        throw new Error(`No data provided for ${username}. So skipping.`);
+      if (isMissingData || isEmpty) continue;
+
+      for (const profile of arrProfiles) {
+        await this.delUserProfile({ username, profile });
+      }
+    }
+  }
+
   async setProfileOption(data) {
     const { option, profile } = data;
     if (!option || !profile) throw new Error('Invalid or missing data');
