@@ -93,7 +93,7 @@ export default class DBMS {
     this[`get${pluralFunctionTableName}`] = (req, res) => {
       this.query(`SELECT * FROM public.${tableName}`, [])
         .then((result) => {
-          res.send(result.rows);
+          return result.rows;
         })
         .catch((error) => {
           console.error(`Error fetching ${tableName}s:`, error);
@@ -110,7 +110,7 @@ export default class DBMS {
       const query = `SELECT * FROM public.${tableName} WHERE ${fields.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
       this.query(query, values)
         .then((result) => {
-          res.send(result.rows);
+          return result.rows;
         })
         .catch((error) => {
           console.error(`Error fetching ${tableName}s:`, error);
@@ -131,7 +131,7 @@ export default class DBMS {
 
       this.query(insertQuery, values)
         .then(() => {
-          res.send({ message: 'Registro insertado correctamente' });
+          return 'Registro insertado correctamente';
         })
         .catch((error) => {
           console.error(`Error inserting into ${tableName}:`, error);
@@ -170,7 +170,7 @@ export default class DBMS {
     `;
       this.query(updateQuery, [...Object.values(req.body), id])
         .then(() => {
-          res.send({ message: 'Registro actualizado correctamente' });
+          return 'Registro actualizado correctamente';
         })
         .catch((error) => {
           console.error(`Error updating ${tableName}:`, error);
@@ -203,13 +203,13 @@ export default class DBMS {
       }
 
       const updateQuery = `
-      UPDATE public.${tableName}
-      SET ${keys.map((key, i) => `${key} = $${i + 1}`).join(', ')}
-      WHERE username = $${keys.length + 1};
-    `;
+        UPDATE public.${tableName}
+        SET ${keys.map((key, i) => `${key} = $${i + 1}`).join(', ')}
+        WHERE username = $${keys.length + 1};
+      `;
       this.query(updateQuery, [...Object.values(req.body), username])
         .then(() => {
-          res.send({ message: 'Registro actualizado correctamente' });
+          return 'Registro actualizado correctamente';
         })
         .catch((error) => {
           console.error(`Error updating ${tableName}:`, error);
@@ -224,7 +224,7 @@ export default class DBMS {
       const deleteQuery = `DELETE FROM public.${tableName} WHERE username = $1;`;
       this.query(deleteQuery, [username])
         .then(() => {
-          res.send({ message: 'Registro eliminado correctamente' });
+          return 'Registro eliminado correctamente';
         })
         .catch((error) => {
           console.error(`Error eliminando ${tableName}:`, error);
@@ -239,7 +239,7 @@ export default class DBMS {
       const deleteQuery = `DELETE FROM public.${tableName} WHERE id = $1;`;
       this.query(deleteQuery, [id])
         .then(() => {
-          res.send({ message: 'Registro eliminado correctamente' });
+          return 'Registro eliminado correctamente';
         })
         .catch((error) => {
           console.error(`Error eliminando ${tableName}:`, error);
@@ -263,9 +263,7 @@ export default class DBMS {
       const deleteQuery = `DELETE FROM public.${tableName};`;
       this.query(deleteQuery, [])
         .then(() => {
-          res.send({
-            message: `Todos los ${tableName} han sido eliminados correctamente`,
-          });
+          return `Todos los ${tableName} han sido eliminados correctamente`;
         })
         .catch((error) => {
           console.error(`Error eliminando ${tableName}:`, error);
@@ -281,7 +279,7 @@ export default class DBMS {
       const query = `DELETE FROM public.${tableName} WHERE ${fields.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
       this.query(query, values)
         .then(() => {
-          res.send({ message: `${tableName} eliminados correctamente` });
+          return `${tableName} eliminados correctamente`;
         })
         .catch((error) => {
           console.error(`Error eliminando ${tableName}:`, error);

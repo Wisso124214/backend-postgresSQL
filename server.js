@@ -23,8 +23,9 @@ const security = new Security();
   .then(async () => {
     await session.init(app);
     dbms.init();
-    // console.log('session methods:', session.getAllDinamicMethodNames());
+    // console.log('dbms: ', dbms.getThis());
     // console.log('dbms methods:', dbms.getAllDinamicMethodNames());
+    // console.log('session methods:', session.getAllDinamicMethodNames());
   })
   .catch((err) => {
     console.log('Error server listening ', err);
