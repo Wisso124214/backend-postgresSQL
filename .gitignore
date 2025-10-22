@@ -1,6 +1,2 @@
 node_modules
 config-db.js
-*.rar
-
-dev-tests
-db-structure.js

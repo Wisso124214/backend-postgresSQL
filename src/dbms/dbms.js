@@ -1,4 +1,5 @@
 import { pool } from '#config/config-db.js';
+import { ERROR_CODES } from '#config/config.js';
 
 export default class DBMS {
   constructor() {
@@ -81,212 +82,287 @@ export default class DBMS {
   }
 
   createMaintenanceTableName(tableName) {
-    const functionTableName = tableName
+    const TableName = tableName
       .split('_')
       .map(this.toUpperCaseFirstLetter)
       .join('');
 
-    const pluralFunctionTableName = functionTableName.endsWith('s')
-      ? `${functionTableName}es`
-      : `${functionTableName}s`;
+    const TableNames = TableName.endsWith('s')
+      ? `${TableName}es`
+      : `${TableName}s`;
 
-    this[`get${pluralFunctionTableName}`] = (req, res) => {
-      this.query(`SELECT * FROM public.${tableName}`, [])
-        .then((result) => {
-          return result.rows;
-        })
-        .catch((error) => {
-          console.error(`Error fetching ${tableName}s:`, error);
-          res
-            .status(500)
-            .send({ errorCode: 500, message: 'Error del servidor' });
-        });
+    this[`get${TableNames}`] = async () => {
+      const queryString = `SELECT * FROM public.${tableName}`;
+      const values = [];
+
+      try {
+        const result = await this.query(queryString, values);
+        if (result && result.rows && result.rows.length > 0)
+          return { data: result.rows };
+        else
+          return {
+            errorCode: ERROR_CODES.BAD_REQUEST,
+            message: 'No se encontraron registros',
+          };
+      } catch (error) {
+        console.error(
+          `Error fetching ${tableName} on get${TableNames}:`,
+          error
+        );
+        return {
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: 'Error del servidor',
+        };
+      }
     };
 
-    this[`get${pluralFunctionTableName}Where`] = (req, res) => {
-      const fields = Object.keys(req.params || req.body || {});
-      const values = Object.values(req.params || req.body || {});
+    this[`get${TableNames}Where`] = async (data) => {
+      const keys = Object.keys(data.whereData || {});
+      const values = Object.values(data.whereData || {});
+      const dbSchema = data.dbSchema || 'public';
+      const queryString = `SELECT * FROM ${dbSchema}.${tableName} WHERE ${keys.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
 
-      const query = `SELECT * FROM public.${tableName} WHERE ${fields.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
-      this.query(query, values)
-        .then((result) => {
-          return result.rows;
-        })
-        .catch((error) => {
-          console.error(`Error fetching ${tableName}s:`, error);
-          res
-            .status(500)
-            .send({ errorCode: 500, message: 'Error del servidor' });
-        });
+      if (values.length === 0 || keys.length === 0) {
+        return {
+          errorCode: ERROR_CODES.BAD_REQUEST,
+          message: 'No se proporcionaron datos necesarios para la consulta',
+        };
+      }
+
+      try {
+        const result = await this.query(queryString, values);
+        if (result && result.rows && result.rows.length > 0)
+          return { data: result.rows };
+        else
+          return {
+            errorCode: ERROR_CODES.BAD_REQUEST,
+            message: 'No se encontraron registros',
+          };
+      } catch (error) {
+        console.error(
+          `Error fetching ${tableName} on get${TableNames}Where:`,
+          error
+        );
+        return {
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: 'Error del servidor',
+        };
+      }
     };
 
-    this[`insert${functionTableName}`] = (req, res) => {
-      const keys = Object.keys(req.body || {});
-      const values = Object.values(req.body || {});
-
-      const insertQuery = `
-        INSERT INTO public.${tableName} (${keys.join(', ')})
+    this[`insert${TableName}`] = async (data) => {
+      const keys = Object.keys(data.whereData || {});
+      const values = Object.values(data.whereData || {});
+      const dbSchema = data.dbSchema || 'public';
+      const queryString = `
+        INSERT INTO ${dbSchema}.${tableName} (${keys.join(', ')})
         VALUES (${keys.map((_, i) => `$${i + 1}`).join(', ')});
       `;
 
-      this.query(insertQuery, values)
-        .then(() => {
-          return 'Registro insertado correctamente';
-        })
-        .catch((error) => {
-          console.error(`Error inserting into ${tableName}:`, error);
-          res
-            .status(500)
-            .send({ errorCode: 500, message: 'Error del servidor' });
-        });
+      if (values.length === 0 || keys.length === 0) {
+        return {
+          errorCode: ERROR_CODES.BAD_REQUEST,
+          message: 'No se proporcionaron datos necesarios para la consulta',
+        };
+      }
+
+      try {
+        await this.query(queryString, values);
+        return { message: 'Registro insertado correctamente' };
+      } catch (error) {
+        console.error(
+          `Error fetching ${tableName} on get${TableNames}Where:`,
+          error
+        );
+        return {
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: 'Error del servidor',
+        };
+      }
     };
 
-    this[`update${functionTableName}ById`] = (req, res) => {
-      const { id } = req.params || req.body;
-      let keys = Object.keys(req.body || {});
+    this[`update${TableName}ById`] = async (data) => {
+      const { userId } = data;
+      const keys = Object.keys(data.whereData || {});
+      const values = Object.values(data.whereData || {});
+      const dbSchema = data.dbSchema || 'public';
+      const queryString = `
+        UPDATE ${dbSchema}.${tableName}
+        SET ${keys.map((key, i) => `${key} = $${i + 1}`).join(', ')}
+        WHERE id = $${keys.length + 1};
+      `;
 
-      if (req.params && req.params.id) {
-        keys = keys.filter((key) => key !== 'id');
+      if (values.length === 0 || keys.length === 0 || !userId) {
+        return {
+          errorCode: ERROR_CODES.BAD_REQUEST,
+          message: 'No se proporcionaron datos necesarios para la consulta',
+        };
       }
 
-      if (!id) {
-        return res.status(400).send({
-          errorCode: 400,
-          message: 'ID es requerido para la actualización',
-        });
+      try {
+        await this.query(queryString, [...values, userId]);
+        return { message: 'Registro actualizado correctamente' };
+      } catch (error) {
+        console.error(
+          `Error fetching ${tableName} on get${TableNames}Where:`,
+          error
+        );
+        return {
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: 'Error del servidor',
+        };
       }
-
-      if (keys.length === 0) {
-        return res.status(400).send({
-          errorCode: 400,
-          message: 'No se proporcionaron campos para actualizar',
-        });
-      }
-
-      const updateQuery = `
-      UPDATE public.${tableName}
-      SET ${keys.map((key, i) => `${key} = $${i + 1}`).join(', ')}
-      WHERE id = $${keys.length + 1};
-    `;
-      this.query(updateQuery, [...Object.values(req.body), id])
-        .then(() => {
-          return 'Registro actualizado correctamente';
-        })
-        .catch((error) => {
-          console.error(`Error updating ${tableName}:`, error);
-          res
-            .status(500)
-            .send({ errorCode: 500, message: 'Error del servidor' });
-        });
     };
 
-    this[`update${functionTableName}ByUsername`] = (req, res) => {
-      const { username } = req.params || req.body;
-      let keys = Object.keys(req.body || {});
-
-      if (req.params && req.params.username) {
-        keys = keys.filter((key) => key !== 'username');
-      }
-
-      if (!username) {
-        return res.status(400).send({
-          errorCode: 400,
-          message: 'Username es requerido para la actualización',
-        });
-      }
-
-      if (keys.length === 0) {
-        return res.status(400).send({
-          errorCode: 400,
-          message: 'No se proporcionaron campos para actualizar',
-        });
-      }
-
-      const updateQuery = `
-        UPDATE public.${tableName}
+    this[`update${TableName}ByUsername`] = async (data) => {
+      const { username } = data;
+      const keys = Object.keys(data.whereData || {});
+      const values = Object.values(data.whereData || {});
+      const dbSchema = data.dbSchema || 'public';
+      const queryString = `
+        UPDATE ${dbSchema}.${tableName}
         SET ${keys.map((key, i) => `${key} = $${i + 1}`).join(', ')}
         WHERE username = $${keys.length + 1};
       `;
-      this.query(updateQuery, [...Object.values(req.body), username])
-        .then(() => {
-          return 'Registro actualizado correctamente';
-        })
-        .catch((error) => {
-          console.error(`Error updating ${tableName}:`, error);
-          res
-            .status(500)
-            .send({ errorCode: 500, message: 'Error del servidor' });
-        });
-    };
 
-    this[`delete${functionTableName}ByUsername`] = (req, res) => {
-      const { username } = req.params;
-      const deleteQuery = `DELETE FROM public.${tableName} WHERE username = $1;`;
-      this.query(deleteQuery, [username])
-        .then(() => {
-          return 'Registro eliminado correctamente';
-        })
-        .catch((error) => {
-          console.error(`Error eliminando ${tableName}:`, error);
-          res
-            .status(500)
-            .send({ errorCode: 500, message: 'Error del servidor' });
-        });
-    };
-
-    this[`delete${functionTableName}ById`] = (req, res) => {
-      const { id } = req.params;
-      const deleteQuery = `DELETE FROM public.${tableName} WHERE id = $1;`;
-      this.query(deleteQuery, [id])
-        .then(() => {
-          return 'Registro eliminado correctamente';
-        })
-        .catch((error) => {
-          console.error(`Error eliminando ${tableName}:`, error);
-          res
-            .status(500)
-            .send({ errorCode: 500, message: 'Error del servidor' });
-        });
-    };
-
-    this[`deleteAll${pluralFunctionTableName}`] = (req, res) => {
-      if (
-        !req.body.confirm ||
-        req.body.confirm !== `DELETE_ALL_${tableName.toUpperCase()}S`
-      ) {
-        return res.status(400).send({
-          errorCode: 400,
-          message: `Confirmación no válida para eliminar todos los ${tableName}`,
-        });
+      if (values.length === 0 || keys.length === 0 || !username) {
+        return {
+          errorCode: ERROR_CODES.BAD_REQUEST,
+          message: 'No se proporcionaron datos necesarios para la consulta',
+        };
       }
 
-      const deleteQuery = `DELETE FROM public.${tableName};`;
-      this.query(deleteQuery, [])
-        .then(() => {
-          return `Todos los ${tableName} han sido eliminados correctamente`;
-        })
-        .catch((error) => {
-          console.error(`Error eliminando ${tableName}:`, error);
-          res
-            .status(500)
-            .send({ errorCode: 500, message: 'Error del servidor' });
-        });
+      try {
+        await this.query(queryString, [...values, username]);
+        return { message: 'Registro actualizado correctamente' };
+      } catch (error) {
+        console.error(
+          `Error fetching ${tableName} on get${TableNames}Where:`,
+          error
+        );
+        return {
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: 'Error del servidor',
+        };
+      }
     };
 
-    this[`delete${pluralFunctionTableName}Where`] = (req, res) => {
-      const { fields, values } = req.params;
+    this[`delete${TableName}ByUsername`] = async (data) => {
+      const { username } = data;
+      const dbSchema = data.dbSchema || 'public';
+      const queryString = `DELETE FROM ${dbSchema}.${tableName} WHERE username = $1;`;
 
-      const query = `DELETE FROM public.${tableName} WHERE ${fields.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
-      this.query(query, values)
-        .then(() => {
-          return `${tableName} eliminados correctamente`;
-        })
-        .catch((error) => {
-          console.error(`Error eliminando ${tableName}:`, error);
-          res
-            .status(500)
-            .send({ errorCode: 500, message: 'Error del servidor' });
-        });
+      if (!username) {
+        return {
+          errorCode: ERROR_CODES.BAD_REQUEST,
+          message: 'No se proporcionaron datos necesarios para la consulta',
+        };
+      }
+
+      try {
+        await this.query(queryString, [username]);
+        return { message: 'Registro eliminado correctamente' };
+      } catch (error) {
+        console.error(
+          `Error fetching ${tableName} on get${TableNames}Where:`,
+          error
+        );
+        return {
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: 'Error del servidor',
+        };
+      }
+    };
+
+    this[`delete${TableName}ById`] = async (data) => {
+      const { userId } = data;
+      const dbSchema = data.dbSchema || 'public';
+      const queryString = `DELETE FROM ${dbSchema}.${tableName} WHERE id = $1;`;
+
+      if (!userId) {
+        return {
+          errorCode: ERROR_CODES.BAD_REQUEST,
+          message: 'No se proporcionaron datos necesarios para la consulta',
+        };
+      }
+
+      try {
+        await this.query(queryString, [userId]);
+        return { message: 'Registro eliminado correctamente' };
+      } catch (error) {
+        console.error(
+          `Error fetching ${tableName} on get${TableNames}Where:`,
+          error
+        );
+        return {
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: 'Error del servidor',
+        };
+      }
+    };
+
+    this[`deleteAll${TableNames}`] = async (data) => {
+      const dbSchema = data.dbSchema || 'public';
+      if (
+        !data.confirmDeleteAll ||
+        data.confirmDeleteAll !== `DELETE_ALL_${TableNames.toUpperCase()}`
+      ) {
+        return {
+          errorCode: ERROR_CODES.BAD_REQUEST,
+          message: `Confirmación no válida para eliminar toda la tabla ${tableName}`,
+        };
+      }
+
+      const queryString = `DELETE FROM ${dbSchema}.${tableName};`;
+      try {
+        await this.query(queryString, []);
+        return {
+          message: `Todos los ${tableName} han sido eliminados correctamente`,
+        };
+      } catch (error) {
+        console.error(
+          `Error fetching ${tableName} on get${TableNames}Where:`,
+          error
+        );
+        return {
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: 'Error del servidor',
+        };
+      }
+    };
+
+    this[`delete${TableNames}Where`] = async (data) => {
+      const keys = Object.keys(data.whereData || {});
+      const values = Object.values(data.whereData || {});
+      const dbSchema = data.dbSchema || 'public';
+      const queryString = `DELETE FROM ${dbSchema}.${tableName} WHERE ${keys.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
+
+      if (values.length === 0 || keys.length === 0) {
+        return {
+          errorCode: ERROR_CODES.BAD_REQUEST,
+          message: 'No se proporcionaron datos necesarios para la consulta',
+        };
+      }
+
+      try {
+        const result = await this.query(queryString, values);
+        if (result && result.rows && result.rows.length > 0)
+          return { data: result.rows };
+        else
+          return {
+            errorCode: ERROR_CODES.BAD_REQUEST,
+            message: `${tableName} eliminados correctamente`,
+          };
+      } catch (error) {
+        console.error(
+          `Error fetching ${tableName} on get${TableNames}Where:`,
+          error
+        );
+        return {
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: 'Error del servidor',
+        };
+      }
     };
   }
 
@@ -385,13 +461,13 @@ export default class DBMS {
     const { username, profile } = data;
     if (!username || !profile) throw new Error('Invalid or missing data');
 
-    const deleteQuery = `
+    const queryString = `
       DELETE FROM public."user_profile"
       WHERE id_user = (SELECT id FROM public."user" WHERE username = $1)
       AND id_profile = (SELECT id FROM public."profile" WHERE name = $2);
     `;
     try {
-      await this.query(deleteQuery, [username, profile]);
+      await this.query(queryString, [username, profile]);
     } catch (error) {
       console.error('Error in delUserProfile:', error);
       throw new Error('Database error');
@@ -507,13 +583,13 @@ export default class DBMS {
   async delProfileOption(data) {
     const { option, profile } = data;
     if (!option || !profile) throw new Error('Invalid or missing data');
-    const deleteQuery = `
+    const queryString = `
       DELETE FROM public."option_profile"
       WHERE id_option = (SELECT id FROM public."option" WHERE name = $1)
       AND id_profile = (SELECT id FROM public."profile" WHERE name = $2);
     `;
     try {
-      await this.query(deleteQuery, [option, profile]);
+      await this.query(queryString, [option, profile]);
     } catch (error) {
       console.error('Error in delProfileOption:', error);
       throw new Error('Database error');
@@ -622,13 +698,13 @@ export default class DBMS {
   async delMenuOption(data) {
     const { option, menu } = data;
     if (!option || !menu) throw new Error('Invalid or missing data');
-    const deleteQuery = `
+    const queryString = `
       DELETE FROM public."option_menu"
       WHERE id_option = (SELECT id FROM public."option" WHERE name = $1)
       AND id_menu = (SELECT id FROM public."menu" WHERE name = $2);
     `;
     try {
-      await this.query(deleteQuery, [option, menu]);
+      await this.query(queryString, [option, menu]);
     } catch (error) {
       console.error('Error in delMenuOption:', error);
       throw new Error('Database error');
@@ -772,14 +848,14 @@ export default class DBMS {
   }
 
   async delAllMenusOptionsProfiles() {
-    const deleteQuery = `
+    const queryString = `
       DELETE FROM public."option_menu";
       DELETE FROM public."option_profile";
       DELETE FROM public."menu";
       DELETE FROM public."option";
     `;
     try {
-      await this.query(deleteQuery);
+      await this.query(queryString);
     } catch (error) {
       console.error('Error in delAllMenusOptionsProfiles:', error);
       throw new Error('Database error');
@@ -891,13 +967,13 @@ export default class DBMS {
   async delProfileMethod(data) {
     const { method, profile } = data;
     if (!method || !profile) throw new Error('Invalid or missing data');
-    const deleteQuery = `
+    const queryString = `
       DELETE FROM public."method_profile"
       WHERE id_method = (SELECT id FROM public."method" WHERE name = $1)
       AND id_profile = (SELECT id FROM public."profile" WHERE name = $2);
     `;
     try {
-      await this.query(deleteQuery, [method, profile]);
+      await this.query(queryString, [method, profile]);
     } catch (error) {
       console.error('Error in delProfileMethod:', error);
       throw new Error('Database error');
@@ -1006,13 +1082,13 @@ export default class DBMS {
   async delClassMethod(data) {
     const { className, method } = data;
     if (!className || !method) throw new Error('Invalid or missing data');
-    const deleteQuery = `
+    const queryString = `
       DELETE FROM public."class_method"
       WHERE id_class = (SELECT id FROM public."class" WHERE name = $1)
       AND id_method = (SELECT id FROM public."method" WHERE name = $2);
     `;
     try {
-      await this.query(deleteQuery, [className, method]);
+      await this.query(queryString, [className, method]);
     } catch (error) {
       console.error('Error in delClassMethod:', error);
       throw new Error('Database error');
@@ -1142,13 +1218,13 @@ export default class DBMS {
     if (!subsystem || !className || !method)
       throw new Error('Invalid or missing data');
     await this.delClassMethod({ className, method });
-    const deleteQuery = `
+    const queryString = `
       DELETE FROM public."subsystem_class"
       WHERE id_subsystem = (SELECT id FROM public."subsystem" WHERE name = $1)
       AND id_class = (SELECT id FROM public."class" WHERE name = $2);
     `;
     try {
-      await this.query(deleteQuery, [subsystem, className]);
+      await this.query(queryString, [subsystem, className]);
     } catch (error) {
       console.error('Error in delSubsystemClassMethod:', error);
       throw new Error('Database error');
@@ -1169,7 +1245,7 @@ export default class DBMS {
   }
 
   async delAllSubsystemsClassesMethods() {
-    const deleteQuery = `
+    const queryString = `
       DELETE FROM public."method_profile";
       DELETE FROM public.transaction;
       DELETE FROM public."subsystem";
@@ -1177,7 +1253,7 @@ export default class DBMS {
       DELETE FROM public."method";
     `;
     try {
-      await this.query(deleteQuery);
+      await this.query(queryString);
     } catch (error) {
       console.error('Error in delAllSubsystemsClassesMethods:', error);
       throw new Error('Database error');

@@ -14,7 +14,7 @@
     "src",
     "utils",
     "src/services",
-    "dev-tests",
+    ".dev-tests",
     "*.js",
     "config/config-db.js",
     "config/config.js",
