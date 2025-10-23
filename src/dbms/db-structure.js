@@ -1,9 +1,9 @@
-import { profiles } from '#config/config.js';
+import { PROFILES } from '#config/config.js';
 
 const { SUPER_ADMIN, SECURITY_ADMIN, EVENT_ADMIN, PARTICIPANT } = Object.keys(
-  profiles
+  PROFILES
 ).reduce((acc, key) => {
-  acc[key] = profiles[key].name;
+  acc[key] = PROFILES[key].name;
   return acc;
 }, {});
 
@@ -59,15 +59,6 @@ export const subsystems = {
           createMaintenanceTableName: {
             description:
               'Crea los métodos para mantener una tabla en la base de datos',
-            allowedProfiles: [SUPER_ADMIN, SECURITY_ADMIN],
-          },
-          toUpperCaseFirstLetter: {
-            description:
-              'Convierte la primera letra de una cadena a mayúsculas',
-            allowedProfiles: [SUPER_ADMIN, SECURITY_ADMIN],
-          },
-          getAllDinamicMethodNames: {
-            description: 'Obtiene todos los nombres de métodos dinámicos',
             allowedProfiles: [SUPER_ADMIN, SECURITY_ADMIN],
           },
           setProfileToUser: {
@@ -521,10 +512,6 @@ export const subsystems = {
             description: 'Inicializa el manejo de sesiones en la aplicación',
             allowedProfiles: [SUPER_ADMIN, SECURITY_ADMIN],
           },
-          getAllDinamicMethodNames: {
-            description: 'Obtiene todos los nombres de métodos dinámicos',
-            allowedProfiles: [SUPER_ADMIN, SECURITY_ADMIN],
-          },
           createAndUpdateSession: {
             description:
               'Crea y actualiza una sesión con los datos proporcionados',
@@ -622,6 +609,24 @@ export const subsystems = {
           },
           validateDescription: {
             description: 'Valida una descripción',
+            allowedProfiles: [SUPER_ADMIN, SECURITY_ADMIN],
+          },
+        },
+      },
+      services: {
+        description: 'Servicios generales variados',
+        methods: {
+          toUpperCaseFirstLetter: {
+            description:
+              'Convierte la primera letra de una cadena a mayúsculas',
+            allowedProfiles: [SUPER_ADMIN, SECURITY_ADMIN],
+          },
+          getAllDinamicMethodNames: {
+            description: 'Obtiene todos los nombres de métodos dinámicos',
+            allowedProfiles: [SUPER_ADMIN, SECURITY_ADMIN],
+          },
+          handleError: {
+            description: 'Maneja errores en la aplicación',
             allowedProfiles: [SUPER_ADMIN, SECURITY_ADMIN],
           },
         },

@@ -11,13 +11,14 @@
     "#config/*": "./config/*",
     "#src/*": "./src/*",
     "#utils/*": "./utils/*",
-    "#services/*": "./src/services/*",
+    "#session/*": "./src/session/*",
+    "#security/*": "./src/security/*",
     "#dbms/*": "./src/dbms/*",
     "#mailer/*": "./src/mailer/*",
     "#tokenizer/*": "./src/tokenizer/*",
     "#validator/*": "./src/validator/*",
-    "#security/*": "./src/security/*",
-    "#session/*": "./src/session/*"
+    "#debugger/*": "./src/debugger/*",
+    "#services/*": "./src/services/*"
   },
   "scripts": {
     "start": "node server.js",

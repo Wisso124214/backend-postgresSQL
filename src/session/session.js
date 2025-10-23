@@ -22,7 +22,4 @@ export default class Session {
   async init(app) {
     this.createRoutes(app);
   }
-
-  getAllDinamicMethodNames = () =>
-    Object.keys(this).filter((prop) => typeof this[prop] === 'function');
 }

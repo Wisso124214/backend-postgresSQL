@@ -6,7 +6,7 @@ export const config = {
 
 export const SERVER_URL = `${config.PROTOCOL}://${config.SERVER_IP}:${config.PORT}`;
 
-export const profiles = {
+export const PROFILES = {
   SUPER_ADMIN: {
     name: 'super administrador',
   },

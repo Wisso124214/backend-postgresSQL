@@ -1,5 +1,6 @@
 import { pool } from '#config/config-db.js';
 import { ERROR_CODES } from '#config/config.js';
+import Services from '#services/services.js';
 
 export default class DBMS {
   constructor() {
@@ -18,6 +19,8 @@ export default class DBMS {
       'method_profile',
       'user_profile',
     ];
+
+    this.srvcs = new Services();
 
     if (!DBMS.instance) {
       DBMS.instance = this;
@@ -84,7 +87,7 @@ export default class DBMS {
   createMaintenanceTableName(tableName) {
     const TableName = tableName
       .split('_')
-      .map(this.toUpperCaseFirstLetter)
+      .map(this.srvcs.toUpperCaseFirstLetter)
       .join('');
 
     const TableNames = TableName.endsWith('s')
@@ -96,12 +99,12 @@ export default class DBMS {
       const values = [];
 
       try {
-        const result = await this.query(queryString, values);
+        const result = await this.query(queryString, values).then((res) => res);
         if (result && result.rows && result.rows.length > 0)
           return { data: result.rows };
         else
           return {
-            errorCode: ERROR_CODES.BAD_REQUEST,
+            errorCode: ERROR_CODES.NOT_FOUND,
             message: 'No se encontraron registros',
           };
       } catch (error) {
@@ -117,8 +120,8 @@ export default class DBMS {
     };
 
     this[`get${TableNames}Where`] = async (data) => {
-      const keys = Object.keys(data.whereData || {});
-      const values = Object.values(data.whereData || {});
+      const keys = Object.keys(data.keyValueData || {});
+      const values = Object.values(data.keyValueData || {});
       const dbSchema = data.dbSchema || 'public';
       const queryString = `SELECT * FROM ${dbSchema}.${tableName} WHERE ${keys.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
 
@@ -130,12 +133,12 @@ export default class DBMS {
       }
 
       try {
-        const result = await this.query(queryString, values);
+        const result = await this.query(queryString, values).then((res) => res);
         if (result && result.rows && result.rows.length > 0)
           return { data: result.rows };
         else
           return {
-            errorCode: ERROR_CODES.BAD_REQUEST,
+            errorCode: ERROR_CODES.NOT_FOUND,
             message: 'No se encontraron registros',
           };
       } catch (error) {
@@ -151,8 +154,8 @@ export default class DBMS {
     };
 
     this[`insert${TableName}`] = async (data) => {
-      const keys = Object.keys(data.whereData || {});
-      const values = Object.values(data.whereData || {});
+      const keys = Object.keys(data.keyValueData || {});
+      const values = Object.values(data.keyValueData || {});
       const dbSchema = data.dbSchema || 'public';
       const queryString = `
         INSERT INTO ${dbSchema}.${tableName} (${keys.join(', ')})
@@ -167,8 +170,17 @@ export default class DBMS {
       }
 
       try {
-        await this.query(queryString, values);
-        return { message: 'Registro insertado correctamente' };
+        const result = await this.query(queryString, values).then((res) => res);
+
+        if (result && result.rowCount > 0) {
+          return { message: 'Registro insertado correctamente' };
+        } else {
+          return {
+            errorCode: ERROR_CODES.NOT_FOUND,
+            message:
+              'No se encontraron registros que coincidan con los criterios',
+          };
+        }
       } catch (error) {
         console.error(
           `Error fetching ${tableName} on get${TableNames}Where:`,
@@ -183,8 +195,8 @@ export default class DBMS {
 
     this[`update${TableName}ById`] = async (data) => {
       const { userId } = data;
-      const keys = Object.keys(data.whereData || {});
-      const values = Object.values(data.whereData || {});
+      const keys = Object.keys(data.keyValueData || {});
+      const values = Object.values(data.keyValueData || {});
       const dbSchema = data.dbSchema || 'public';
       const queryString = `
         UPDATE ${dbSchema}.${tableName}
@@ -200,8 +212,18 @@ export default class DBMS {
       }
 
       try {
-        await this.query(queryString, [...values, userId]);
-        return { message: 'Registro actualizado correctamente' };
+        const result = await this.query(queryString, [...values, userId]).then(
+          (res) => res
+        );
+        if (result && result.rowCount > 0) {
+          return { message: 'Registro actualizado correctamente' };
+        } else {
+          return {
+            errorCode: ERROR_CODES.NOT_FOUND,
+            message:
+              'No se encontraron registros que coincidan con los criterios',
+          };
+        }
       } catch (error) {
         console.error(
           `Error fetching ${tableName} on get${TableNames}Where:`,
@@ -216,8 +238,8 @@ export default class DBMS {
 
     this[`update${TableName}ByUsername`] = async (data) => {
       const { username } = data;
-      const keys = Object.keys(data.whereData || {});
-      const values = Object.values(data.whereData || {});
+      const keys = Object.keys(data.keyValueData || {});
+      const values = Object.values(data.keyValueData || {});
       const dbSchema = data.dbSchema || 'public';
       const queryString = `
         UPDATE ${dbSchema}.${tableName}
@@ -233,8 +255,19 @@ export default class DBMS {
       }
 
       try {
-        await this.query(queryString, [...values, username]);
-        return { message: 'Registro actualizado correctamente' };
+        const result = await this.query(queryString, [
+          ...values,
+          username,
+        ]).then((res) => res);
+        if (result && result.rowCount > 0) {
+          return { message: 'Registro actualizado correctamente' };
+        } else {
+          return {
+            errorCode: ERROR_CODES.NOT_FOUND,
+            message:
+              'No se encontraron registros que coincidan con los criterios',
+          };
+        }
       } catch (error) {
         console.error(
           `Error fetching ${tableName} on get${TableNames}Where:`,
@@ -260,8 +293,18 @@ export default class DBMS {
       }
 
       try {
-        await this.query(queryString, [username]);
-        return { message: 'Registro eliminado correctamente' };
+        const result = await this.query(queryString, [username]).then(
+          (res) => res
+        );
+        if (result && result.rowCount > 0) {
+          return { message: 'Registro eliminado correctamente' };
+        } else {
+          return {
+            errorCode: ERROR_CODES.NOT_FOUND,
+            message:
+              'No se encontraron registros que coincidan con los criterios',
+          };
+        }
       } catch (error) {
         console.error(
           `Error fetching ${tableName} on get${TableNames}Where:`,
@@ -287,8 +330,18 @@ export default class DBMS {
       }
 
       try {
-        await this.query(queryString, [userId]);
-        return { message: 'Registro eliminado correctamente' };
+        const result = await this.query(queryString, [userId]).then(
+          (res) => res
+        );
+        if (result && result.rowCount > 0) {
+          return { message: 'Registro eliminado correctamente' };
+        } else {
+          return {
+            errorCode: ERROR_CODES.NOT_FOUND,
+            message:
+              'No se encontraron registros que coincidan con los criterios',
+          };
+        }
       } catch (error) {
         console.error(
           `Error fetching ${tableName} on get${TableNames}Where:`,
@@ -304,8 +357,8 @@ export default class DBMS {
     this[`deleteAll${TableNames}`] = async (data) => {
       const dbSchema = data.dbSchema || 'public';
       if (
-        !data.confirmDeleteAll ||
-        data.confirmDeleteAll !== `DELETE_ALL_${TableNames.toUpperCase()}`
+        !data.confirmDelete ||
+        data.confirmDelete !== `DELETE_ALL_${TableNames.toUpperCase()}`
       ) {
         return {
           errorCode: ERROR_CODES.BAD_REQUEST,
@@ -315,10 +368,17 @@ export default class DBMS {
 
       const queryString = `DELETE FROM ${dbSchema}.${tableName};`;
       try {
-        await this.query(queryString, []);
-        return {
-          message: `Todos los ${tableName} han sido eliminados correctamente`,
-        };
+        const result = await this.query(queryString, []).then((res) => res);
+        if (result && result.rowCount > 0)
+          return {
+            message: `Todos los ${tableName} han sido eliminados correctamente`,
+          };
+        else
+          return {
+            errorCode: ERROR_CODES.NOT_FOUND,
+            message:
+              'No se encontraron registros que coincidan con los criterios',
+          };
       } catch (error) {
         console.error(
           `Error fetching ${tableName} on get${TableNames}Where:`,
@@ -332,8 +392,8 @@ export default class DBMS {
     };
 
     this[`delete${TableNames}Where`] = async (data) => {
-      const keys = Object.keys(data.whereData || {});
-      const values = Object.values(data.whereData || {});
+      const keys = Object.keys(data.keyValueData || {});
+      const values = Object.values(data.keyValueData || {});
       const dbSchema = data.dbSchema || 'public';
       const queryString = `DELETE FROM ${dbSchema}.${tableName} WHERE ${keys.map((f, i) => `${f} = $${i + 1}`).join(' AND ')};`;
 
@@ -345,13 +405,16 @@ export default class DBMS {
       }
 
       try {
-        const result = await this.query(queryString, values);
-        if (result && result.rows && result.rows.length > 0)
-          return { data: result.rows };
+        const result = await this.query(queryString, values).then((res) => res);
+        if (result && result.rowCount > 0)
+          return {
+            message: 'Registros eliminados correctamente',
+          };
         else
           return {
-            errorCode: ERROR_CODES.BAD_REQUEST,
-            message: `${tableName} eliminados correctamente`,
+            errorCode: ERROR_CODES.NOT_FOUND,
+            message:
+              'No se encontraron registros que coincidan con los criterios',
           };
       } catch (error) {
         console.error(
@@ -366,42 +429,49 @@ export default class DBMS {
     };
   }
 
-  toUpperCaseFirstLetter(string) {
-    return string.charAt(0).toUpperCase() + string.slice(1);
-  }
-
-  getAllDinamicMethodNames = () =>
-    Object.keys(this).filter((method) => typeof this[method] === 'function');
-
   async setUserProfile(data) {
     const { username, profile } = data;
-    if (!username || !profile) throw new Error('Invalid or missing data');
-    const userQuery = 'SELECT id FROM public."user" WHERE username = $1;';
-    const profileQuery = 'SELECT id FROM public."profile" WHERE name = $1;';
-    const insertUserProfileQuery = `
-        INSERT INTO public."user_profile" (id_user, id_profile)
-        VALUES ($1, $2)
-        ON CONFLICT DO NOTHING;
-      `;
-    const userRes = await this.query(userQuery, [username]);
-    const profileRes = await this.query(profileQuery, [profile]);
-    if (userRes.rows.length > 0 && profileRes.rows.length > 0) {
-      const userId = userRes.rows[0].id;
-      const profileId = profileRes.rows[0].id;
-      await this.query(insertUserProfileQuery, [userId, profileId]);
-    } else {
-      if (userRes.rows.length === 0)
-        await this.query(
-          'INSERT INTO public."user" (username) VALUES ($1) ON CONFLICT DO NOTHING;',
-          [username]
-        );
-      if (profileRes.rows.length === 0)
-        await this.query(
-          'INSERT INTO public."profile" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
-          [profile]
-        );
+    if (!username || !profile)
+      this.srvcs.handleError({
+        message: 'Invalid or missing data',
+        errorCode: ERROR_CODES.BAD_REQUEST,
+      });
 
-      this.setUserProfile(data);
+    // Get user id using method getUsersWhere
+    // Get profile id using method getProfilesWhere
+    // If they don't exist, create them first
+    // Then insert into user_profile using method insertUserProfile
+
+    try {
+      let userRes = await this.handleGetSetData({
+        method: this.getUsersWhere,
+        methodIfNotFound: this.insertUser,
+        data: { keyValueData: { username } },
+        dataIfNotFound: { keyValueData: { ...data } },
+      })
+        .then((res) => res)
+        .catch((err) => {
+          console.log('Error in handleGetSetData for userRes:', err);
+        });
+
+      let profileRes = await this.handleGetSetData({
+        method: this.getProfilesWhere,
+        methodIfNotFound: this.insertProfile,
+        data: { keyValueData: { name: profile } },
+        dataIfNotFound: { keyValueData: { name: profile } },
+      }).then((res) => res);
+
+      return await this.insertUserProfile({
+        keyValueData: {
+          id_user: userRes.data[0].id,
+          id_profile: profileRes.data[0].id,
+        },
+      }).then((res) => res);
+    } catch (error) {
+      this.srvcs.handleError({
+        message: 'Error on setUserProfile',
+        errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+      });
     }
   }
 
@@ -411,14 +481,30 @@ export default class DBMS {
       const arrProfiles = data[username];
       const isMissingData = !username || !arrProfiles;
       const isEmpty = arrProfiles.length === 0;
-      if (isMissingData) throw new Error('Invalid or missing data');
-      if (isEmpty)
-        throw new Error(`No data provided for ${username}. So skipping.`);
+      if (isMissingData) {
+        this.srvcs.handleError({
+          message: 'Invalid or missing data',
+          errorCode: ERROR_CODES.BAD_REQUEST,
+        });
+      }
+      if (isEmpty) {
+        this.srvcs.handleError({
+          message: `No data provided for ${username}. So skipping.`,
+          errorCode: ERROR_CODES.BAD_REQUEST,
+        });
+      }
       if (isMissingData || isEmpty) continue;
 
+      let res = [];
       for (const profile of arrProfiles) {
-        await this.setUserProfile({ username, profile });
+        res.push({
+          ...(await this.setUserProfile({ username, profile }).then(
+            (res) => res
+          )),
+          profile,
+        });
       }
+      return res;
     }
   }
 
@@ -433,7 +519,7 @@ export default class DBMS {
       WHERE u.username = $1;
     `;
     try {
-      const res = await this.query(selectQuery, [username]);
+      const res = await this.query(selectQuery, [username]).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getUserProfiles:', error);
@@ -449,7 +535,7 @@ export default class DBMS {
       JOIN public."profile" p ON up.id_profile = p.id
     `;
     try {
-      const res = await this.query(selectQuery);
+      const res = await this.query(selectQuery).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getUsersProfiles:', error);
@@ -467,7 +553,7 @@ export default class DBMS {
       AND id_profile = (SELECT id FROM public."profile" WHERE name = $2);
     `;
     try {
-      await this.query(queryString, [username, profile]);
+      await this.query(queryString, [username, profile]).then((res) => res);
     } catch (error) {
       console.error('Error in delUserProfile:', error);
       throw new Error('Database error');
@@ -502,23 +588,29 @@ export default class DBMS {
         ON CONFLICT DO NOTHING;
       `;
     try {
-      const optionRes = await this.query(optionQuery, [option]);
-      const profileRes = await this.query(profileQuery, [profile]);
+      const optionRes = await this.query(optionQuery, [option]).then(
+        (res) => res
+      );
+      const profileRes = await this.query(profileQuery, [profile]).then(
+        (res) => res
+      );
       if (optionRes.rows.length > 0 && profileRes.rows.length > 0) {
         const optionId = optionRes.rows[0].id;
         const profileId = profileRes.rows[0].id;
-        await this.query(insertOptionProfileQuery, [optionId, profileId]);
+        await this.query(insertOptionProfileQuery, [optionId, profileId]).then(
+          (res) => res
+        );
       } else {
         if (optionRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."option" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [option]
-          );
+          ).then((res) => res);
         if (profileRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."profile" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [profile]
-          );
+          ).then((res) => res);
 
         this.setProfileOption(data);
       }
@@ -556,7 +648,7 @@ export default class DBMS {
       WHERE p.name = $1;
     `;
     try {
-      const res = await this.query(selectQuery, [profile]);
+      const res = await this.query(selectQuery, [profile]).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getProfileOptions:', error);
@@ -572,7 +664,7 @@ export default class DBMS {
       JOIN public."option" o ON op.id_option = o.id
     `;
     try {
-      const res = await this.query(selectQuery);
+      const res = await this.query(selectQuery).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getProfilesOptions:', error);
@@ -589,7 +681,7 @@ export default class DBMS {
       AND id_profile = (SELECT id FROM public."profile" WHERE name = $2);
     `;
     try {
-      await this.query(queryString, [option, profile]);
+      await this.query(queryString, [option, profile]).then((res) => res);
     } catch (error) {
       console.error('Error in delProfileOption:', error);
       throw new Error('Database error');
@@ -617,23 +709,27 @@ export default class DBMS {
         ON CONFLICT DO NOTHING;
       `;
     try {
-      const optionRes = await this.query(optionQuery, [option]);
-      const menuRes = await this.query(menuQuery, [menu]);
+      const optionRes = await this.query(optionQuery, [option]).then(
+        (res) => res
+      );
+      const menuRes = await this.query(menuQuery, [menu]).then((res) => res);
       if (optionRes.rows.length > 0 && menuRes.rows.length > 0) {
         const optionId = optionRes.rows[0].id;
         const menuId = menuRes.rows[0].id;
-        await this.query(insertOptionMenuQuery, [optionId, menuId]);
+        await this.query(insertOptionMenuQuery, [optionId, menuId]).then(
+          (res) => res
+        );
       } else {
         if (optionRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."option" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [option]
-          );
+          ).then((res) => res);
         if (menuRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."menu" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [menu]
-          );
+          ).then((res) => res);
 
         this.setMenuOption(data);
       }
@@ -671,7 +767,7 @@ export default class DBMS {
       WHERE m.name = $1;
     `;
     try {
-      const res = await this.query(selectQuery, [menu]);
+      const res = await this.query(selectQuery, [menu]).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getMenuOptions:', error);
@@ -687,7 +783,7 @@ export default class DBMS {
       JOIN public."option" o ON om.id_option = o.id
     `;
     try {
-      const res = await this.query(selectQuery);
+      const res = await this.query(selectQuery).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getMenusOptions:', error);
@@ -704,7 +800,7 @@ export default class DBMS {
       AND id_menu = (SELECT id FROM public."menu" WHERE name = $2);
     `;
     try {
-      await this.query(queryString, [option, menu]);
+      await this.query(queryString, [option, menu]).then((res) => res);
     } catch (error) {
       console.error('Error in delMenuOption:', error);
       throw new Error('Database error');
@@ -769,7 +865,9 @@ export default class DBMS {
       WHERE m.name = $1 AND p.name = $2;
     `;
     try {
-      const res = await this.query(selectQuery, [menu, profile]);
+      const res = await this.query(selectQuery, [menu, profile]).then(
+        (res) => res
+      );
       return res.rows;
     } catch (error) {
       console.error('Error in getMenuOptionsProfile:', error);
@@ -790,7 +888,7 @@ export default class DBMS {
       WHERE p.name = $1;
     `;
     try {
-      const res = await this.query(selectQuery, [profile]);
+      const res = await this.query(selectQuery, [profile]).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getMenusOptionsProfile:', error);
@@ -808,7 +906,7 @@ export default class DBMS {
       JOIN public."profile" p ON op.id_profile = p.id
     `;
     try {
-      const res = await this.query(selectQuery);
+      const res = await this.query(selectQuery).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getMenusOptionsProfile:', error);
@@ -855,7 +953,7 @@ export default class DBMS {
       DELETE FROM public."option";
     `;
     try {
-      await this.query(queryString);
+      await this.query(queryString).then((res) => res);
     } catch (error) {
       console.error('Error in delAllMenusOptionsProfiles:', error);
       throw new Error('Database error');
@@ -886,23 +984,29 @@ export default class DBMS {
         ON CONFLICT DO NOTHING;
       `;
     try {
-      const methodRes = await this.query(methodQuery, [method]);
-      const profileRes = await this.query(profileQuery, [profile]);
+      const methodRes = await this.query(methodQuery, [method]).then(
+        (res) => res
+      );
+      const profileRes = await this.query(profileQuery, [profile]).then(
+        (res) => res
+      );
       if (methodRes.rows.length > 0 && profileRes.rows.length > 0) {
         const methodId = methodRes.rows[0].id;
         const profileId = profileRes.rows[0].id;
-        await this.query(insertMethodProfileQuery, [methodId, profileId]);
+        await this.query(insertMethodProfileQuery, [methodId, profileId]).then(
+          (res) => res
+        );
       } else {
         if (methodRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."method" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [method]
-          );
+          ).then((res) => res);
         if (profileRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."profile" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [profile]
-          );
+          ).then((res) => res);
 
         this.setProfileMethod(data);
       }
@@ -940,7 +1044,7 @@ export default class DBMS {
       WHERE p.name = $1;
     `;
     try {
-      const res = await this.query(selectQuery, [profile]);
+      const res = await this.query(selectQuery, [profile]).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getProfileMethods:', error);
@@ -956,7 +1060,7 @@ export default class DBMS {
       JOIN public."method" m ON mp.id_method = m.id
     `;
     try {
-      const res = await this.query(selectQuery);
+      const res = await this.query(selectQuery).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getProfilesMethods:', error);
@@ -973,7 +1077,7 @@ export default class DBMS {
       AND id_profile = (SELECT id FROM public."profile" WHERE name = $2);
     `;
     try {
-      await this.query(queryString, [method, profile]);
+      await this.query(queryString, [method, profile]).then((res) => res);
     } catch (error) {
       console.error('Error in delProfileMethod:', error);
       throw new Error('Database error');
@@ -1001,23 +1105,29 @@ export default class DBMS {
         ON CONFLICT DO NOTHING;
       `;
     try {
-      const classRes = await this.query(classQuery, [className]);
-      const methodRes = await this.query(methodQuery, [method]);
+      const classRes = await this.query(classQuery, [className]).then(
+        (res) => res
+      );
+      const methodRes = await this.query(methodQuery, [method]).then(
+        (res) => res
+      );
       if (classRes.rows.length > 0 && methodRes.rows.length > 0) {
         const classId = classRes.rows[0].id;
         const methodId = methodRes.rows[0].id;
-        await this.query(insertClassMethodQuery, [classId, methodId]);
+        await this.query(insertClassMethodQuery, [classId, methodId]).then(
+          (res) => res
+        );
       } else {
         if (classRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."class" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [className]
-          );
+          ).then((res) => res);
         if (methodRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."method" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [method]
-          );
+          ).then((res) => res);
 
         this.setClassMethod(data);
       }
@@ -1055,7 +1165,7 @@ export default class DBMS {
       WHERE c.name = $1;
     `;
     try {
-      const res = await this.query(selectQuery, [className]);
+      const res = await this.query(selectQuery, [className]).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getClassMethods:', error);
@@ -1071,7 +1181,7 @@ export default class DBMS {
       JOIN public."method" m ON cm.id_method = m.id
     `;
     try {
-      const res = await this.query(selectQuery);
+      const res = await this.query(selectQuery).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getClassesMethods:', error);
@@ -1088,7 +1198,7 @@ export default class DBMS {
       AND id_method = (SELECT id FROM public."method" WHERE name = $2);
     `;
     try {
-      await this.query(queryString, [className, method]);
+      await this.query(queryString, [className, method]).then((res) => res);
     } catch (error) {
       console.error('Error in delClassMethod:', error);
       throw new Error('Database error');
@@ -1118,23 +1228,30 @@ export default class DBMS {
         ON CONFLICT DO NOTHING;
     `;
     try {
-      const classRes = await this.query(classQuery, [className]);
-      const subsystemRes = await this.query(subsystemQuery, [subsystem]);
+      const classRes = await this.query(classQuery, [className]).then(
+        (res) => res
+      );
+      const subsystemRes = await this.query(subsystemQuery, [subsystem]).then(
+        (res) => res
+      );
       if (classRes.rows.length > 0 && subsystemRes.rows.length > 0) {
         const classId = classRes.rows[0].id;
         const subsystemId = subsystemRes.rows[0].id;
-        await this.query(insertSubsystemClassQuery, [subsystemId, classId]);
+        await this.query(insertSubsystemClassQuery, [
+          subsystemId,
+          classId,
+        ]).then((res) => res);
       } else {
         if (classRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."class" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [className]
-          );
+          ).then((res) => res);
         if (subsystemRes.rows.length === 0)
           await this.query(
             'INSERT INTO public."subsystem" (name) VALUES ($1) ON CONFLICT DO NOTHING;',
             [subsystem]
-          );
+          ).then((res) => res);
         this.setSubsystemClassMethod(data);
       }
     } catch (error) {
@@ -1164,7 +1281,11 @@ export default class DBMS {
         if (isMissingData || isEmpty) continue;
 
         for (const method of methods) {
-          await this.setSubsystemClassMethod({ subsystem, className, method });
+          await this.setSubsystemClassMethod({
+            subsystem,
+            className,
+            method,
+          });
         }
       }
     }
@@ -1185,7 +1306,7 @@ export default class DBMS {
       WHERE s.name = $1;
     `;
     try {
-      const res = await this.query(selectQuery, [subsystem]);
+      const res = await this.query(selectQuery, [subsystem]).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getSubsystemClassesMethods:', error);
@@ -1205,7 +1326,7 @@ export default class DBMS {
       JOIN public."method" m ON cm.id_method = m.id;
     `;
     try {
-      const res = await this.query(selectQuery);
+      const res = await this.query(selectQuery).then((res) => res);
       return res.rows;
     } catch (error) {
       console.error('Error in getSubsystemsClassesMethods:', error);
@@ -1224,7 +1345,7 @@ export default class DBMS {
       AND id_class = (SELECT id FROM public."class" WHERE name = $2);
     `;
     try {
-      await this.query(queryString, [subsystem, className]);
+      await this.query(queryString, [subsystem, className]).then((res) => res);
     } catch (error) {
       console.error('Error in delSubsystemClassMethod:', error);
       throw new Error('Database error');
@@ -1253,7 +1374,7 @@ export default class DBMS {
       DELETE FROM public."method";
     `;
     try {
-      await this.query(queryString);
+      await this.query(queryString).then((res) => res);
     } catch (error) {
       console.error('Error in delAllSubsystemsClassesMethods:', error);
       throw new Error('Database error');
@@ -1283,5 +1404,18 @@ export default class DBMS {
         }
       }
     }
+  }
+
+  async handleGetSetData({ method, methodIfNotFound, data, dataIfNotFound }) {
+    let result = await method(data).then((res) => res);
+    if (
+      result &&
+      result.errorCode &&
+      result.errorCode === ERROR_CODES.NOT_FOUND
+    ) {
+      await methodIfNotFound(dataIfNotFound);
+      result = await method(data).then((res) => res);
+    }
+    return result;
   }
 }

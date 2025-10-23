@@ -7,7 +7,7 @@ export default class Debugger {
     if (Array.isArray(data)) {
       console.log(`  ${' '.repeat(deep * this.logSpacing)}[`);
       data.forEach((item) => {
-        console.log(`  ${' '.repeat((deep + 1) * this.logSpacing)}${item}`);
+        console.log(`  ${' '.repeat((deep + 1) * this.logSpacing)}'${item}',`);
       });
       console.log(`  ${' '.repeat(deep * this.logSpacing)}]`);
     } else {
